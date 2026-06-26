@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Boxes, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiError } from '../api/client';
 import { Button, Field, Input } from '../components/ui';
@@ -37,11 +37,11 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-surface-50 via-surface-50 to-brand-50 px-4 dark:from-surface-950 dark:via-surface-950 dark:to-surface-900">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-soft">
-            <Boxes size={28} />
-          </div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-white">InventPro</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Gestion de stock professionnelle</p>
+          <img src="/logo.svg" alt="SAS Carles" className="mb-3 h-20 w-auto" />
+          <p className="font-display text-lg font-semibold tracking-tight text-brand-700 dark:text-brand-300">
+            Inventaire
+          </p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Gestion de stock et inventaire</p>
         </div>
 
         <div className="card p-7">
@@ -100,7 +100,7 @@ export function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-400">
-          InventPro · Application de démonstration de gestion de stock
+          Carles Inventaire · Gestion de stock et inventaire
         </p>
       </div>
     </div>

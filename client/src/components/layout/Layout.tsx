@@ -8,7 +8,6 @@ import {
   ScanLine,
   LogOut,
   ChevronDown,
-  Boxes,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -76,14 +75,12 @@ export function Layout() {
         }`}
       >
         <div className="flex h-16 items-center gap-2.5 border-b border-slate-200 px-5 dark:border-slate-800">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
-            <Boxes size={20} />
-          </div>
+          <img src="/favicon.svg" alt="Carles" className="h-9 w-9" />
           <div>
             <p className="font-display text-lg font-bold leading-none tracking-tight text-slate-900 dark:text-white">
-              InventPro
+              Carles
             </p>
-            <p className="text-[11px] text-slate-400">Gestion de stock</p>
+            <p className="text-[11px] font-medium tracking-wide text-accent-600 dark:text-accent-400">Inventaire</p>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -155,7 +152,7 @@ export function Layout() {
           {/* Scan */}
           <button
             onClick={() => setScanOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent-600 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-700"
             aria-label="Scanner"
           >
             <ScanLine size={18} />

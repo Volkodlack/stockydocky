@@ -91,8 +91,8 @@ export function DashboardPage() {
                   cursor={{ fill: theme === 'dark' ? '#1e293b55' : '#f1f5f9' }}
                 />
                 <Legend wrapperStyle={{ fontSize: 13 }} />
-                <Bar dataKey="entries" name="Entrées" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="exits" name="Sorties" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="entries" name="Entrées" fill="#523996" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="exits" name="Sorties" fill="#d40c5b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

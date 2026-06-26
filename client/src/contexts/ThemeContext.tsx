@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-const STORAGE_KEY = 'inventpro_theme';
+const STORAGE_KEY = 'carles_theme';
 
 interface ThemeCtx {
   theme: Theme;
@@ -13,7 +13,8 @@ const ThemeContext = createContext<ThemeCtx | undefined>(undefined);
 function getInitial(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
   if (stored === 'light' || stored === 'dark') return stored;
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  // Thème clair par défaut (identité Carles Inventaire)
+  return 'light';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -24,7 +25,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.classList.toggle('dark', theme === 'dark');
     localStorage.setItem(STORAGE_KEY, theme);
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0f172a' : '#4f46e5');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0f172a' : '#523996');
   }, [theme]);
 
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));

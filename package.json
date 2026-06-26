@@ -1,8 +1,8 @@
 {
-  "name": "inventpro-stock",
+  "name": "carles-inventaire",
   "version": "1.0.0",
   "private": true,
-  "description": "Application web de gestion de stock professionnelle (ERP / PWA)",
+  "description": "Carles Inventaire — gestion de stock et inventaire (ERP / PWA)",
   "scripts": {
     "install:all": "npm --prefix server install && npm --prefix client install",
     "dev:server": "npm --prefix server run dev",

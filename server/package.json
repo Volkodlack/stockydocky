@@ -1,5 +1,5 @@
 {
-  "name": "inventpro-server",
+  "name": "carles-inventaire-server",
   "version": "1.0.0",
   "private": true,
   "description": "API REST - gestion de stock",

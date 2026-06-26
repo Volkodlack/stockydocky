@@ -1,4 +1,4 @@
-# Configuration de déploiement Render pour InventPro Stock
+# Configuration de déploiement Render pour Carles Inventaire
 # Doc : https://render.com/docs/blueprint-spec
 #
 # 1 service web Node (sert l'API REST + le frontend React buildé)
@@ -9,7 +9,7 @@
 
 services:
   - type: web
-    name: inventpro-stock
+    name: carles-inventaire
     runtime: node
     plan: free
     region: frankfurt
@@ -21,7 +21,7 @@ services:
         value: production
       - key: DATABASE_URL
         fromDatabase:
-          name: inventpro-db
+          name: carles-db
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
@@ -30,13 +30,18 @@ services:
       # Identifiants du compte administrateur créé au premier déploiement (seed).
       # À MODIFIER après la première connexion.
       - key: SEED_ADMIN_EMAIL
-        value: admin@inventpro.local
+        value: admin@carles.local
       - key: SEED_ADMIN_PASSWORD
         value: Admin123!
+      # Identité émettrice des bons de livraison (PDF). Personnalisez ces valeurs.
+      - key: COMPANY_NAME
+        value: SAS Carles
+      - key: PDF_VAT_RATE
+        value: "20"
 
 databases:
-  - name: inventpro-db
+  - name: carles-db
     plan: free
     region: frankfurt
-    databaseName: inventpro
-    user: inventpro
+    databaseName: carles
+    user: carles

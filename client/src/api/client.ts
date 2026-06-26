@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 
-const TOKEN_KEY = 'inventpro_token';
+const TOKEN_KEY = 'carles_token';
 
 export const tokenStore = {
   get: () => localStorage.getItem(TOKEN_KEY),

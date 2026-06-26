@@ -9,19 +9,33 @@ export default {
         display: ['"Space Grotesk"', 'Inter', 'sans-serif'],
       },
       colors: {
-        // Palette accent indigo
+        // Palette principale — violet du logo SAS Carles (#523996 / #2F1484)
         brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+          50: '#f6f4fb',
+          100: '#ede8f6',
+          200: '#dacfec',
+          300: '#bfaede',
+          400: '#9f86cc',
+          500: '#7e60b6',
+          600: '#523996',
+          700: '#43307a',
+          800: '#372861',
+          900: '#2c2050',
+          950: '#1d1438',
+        },
+        // Accent — magenta du logo SAS Carles (#F01067)
+        accent: {
+          50: '#fff1f6',
+          100: '#ffe3ed',
+          200: '#ffc7d9',
+          300: '#ff9bb8',
+          400: '#fa5f8c',
+          500: '#f0166b',
+          600: '#d40c5b',
+          700: '#b00a4b',
+          800: '#8c0a3d',
+          900: '#6f0a31',
+          950: '#44041d',
         },
         // Gris neutres (slate) pour les surfaces
         surface: {

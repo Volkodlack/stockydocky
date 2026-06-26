@@ -60,7 +60,7 @@ router.get(
     });
 
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'InventPro';
+    wb.creator = 'Carles Inventaire';
     const ws = wb.addWorksheet('Articles');
     ws.columns = [
       { header: 'Référence', key: 'reference', width: 16 },

@@ -67,7 +67,7 @@ export function createApp() {
   } else {
     app.get('/', (_req, res) => {
       res.json({
-        message: 'API InventPro Stock en ligne. Frontend non encore buildé.',
+        message: 'API Carles Inventaire en ligne. Frontend non encore buildé.',
         health: '/api/health',
       });
     });

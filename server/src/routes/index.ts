@@ -20,7 +20,7 @@ const router = Router();
 
 // Vérification de santé (utilisée par Render)
 router.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'inventpro-stock', time: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'carles-inventaire', time: new Date().toISOString() });
 });
 
 router.use('/auth', authRoutes);

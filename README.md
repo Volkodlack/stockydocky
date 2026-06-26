@@ -1,4 +1,4 @@
-# InventPro Stock
+# Carles Inventaire
 
 Application web **professionnelle de gestion de stock** (ERP / PWA) pour un point de vente physique : suivi des articles, entrées/sorties, bons de livraison, inventaires, scan code-barres, tableau de bord, gestion des rôles et exports.
 
@@ -57,7 +57,7 @@ Le tout en **PWA installable**, responsive (mobile/tablette/desktop), avec **mod
 ## Structure du projet
 
 ```
-inventpro-stock/
+carles-inventaire/
 ├── package.json            # scripts monorepo (render-build / render-start)
 ├── render.yaml             # blueprint Render (service web + base PostgreSQL)
 ├── server/                 # API REST + service du frontend buildé
@@ -135,9 +135,9 @@ Créés automatiquement par le seed :
 
 | Rôle | Email | Mot de passe |
 |------|-------|--------------|
-| Administrateur | `admin@inventpro.local` | `Admin123!` |
-| Employé | `employe@inventpro.local` | `Employe123!` |
-| Inventaire | `inventaire@inventpro.local` | `Invent123!` |
+| Administrateur | `admin@carles.local` | `Admin123!` |
+| Employé | `employe@carles.local` | `Employe123!` |
+| Inventaire | `inventaire@carles.local` | `Invent123!` |
 
 L'email/mot de passe administrateur sont configurables via les variables `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`.
 

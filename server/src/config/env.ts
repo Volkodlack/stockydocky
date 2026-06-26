@@ -14,10 +14,10 @@ export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   isProd: (process.env.NODE_ENV ?? 'development') === 'production',
   port: parseInt(process.env.PORT ?? '4000', 10),
-  databaseUrl: required('DATABASE_URL', 'postgresql://localhost:5432/inventpro'),
+  databaseUrl: required('DATABASE_URL', 'postgresql://localhost:5432/carles'),
   jwtSecret: required('JWT_SECRET', 'dev-secret-change-me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
-  seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? 'admin@inventpro.local',
+  seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? 'admin@carles.local',
   seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!',
 };

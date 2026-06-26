@@ -9,7 +9,7 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@inventpro.local';
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@carles.local';
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 
 async function main() {
@@ -30,10 +30,10 @@ async function main() {
 
   const employeeHash = await bcrypt.hash('Employe123!', 10);
   await prisma.user.upsert({
-    where: { email: 'employe@inventpro.local' },
+    where: { email: 'employe@carles.local' },
     update: {},
     create: {
-      email: 'employe@inventpro.local',
+      email: 'employe@carles.local',
       password: employeeHash,
       name: 'Employé Démo',
       role: 'EMPLOYEE',
@@ -42,10 +42,10 @@ async function main() {
 
   const inventoryHash = await bcrypt.hash('Invent123!', 10);
   await prisma.user.upsert({
-    where: { email: 'inventaire@inventpro.local' },
+    where: { email: 'inventaire@carles.local' },
     update: {},
     create: {
-      email: 'inventaire@inventpro.local',
+      email: 'inventaire@carles.local',
       password: inventoryHash,
       name: 'Agent Inventaire',
       role: 'INVENTORY',
@@ -175,8 +175,8 @@ async function main() {
 
   console.log('✅ Données prêtes.');
   console.log(`   Admin     : ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
-  console.log('   Employé   : employe@inventpro.local / Employe123!');
-  console.log('   Inventaire: inventaire@inventpro.local / Invent123!');
+  console.log('   Employé   : employe@carles.local / Employe123!');
+  console.log('   Inventaire: inventaire@carles.local / Invent123!');
 }
 
 main()

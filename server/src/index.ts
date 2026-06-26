@@ -6,7 +6,7 @@ async function main() {
   const app = createApp();
 
   const server = app.listen(env.port, () => {
-    console.log(`✅ InventPro Stock — API démarrée sur le port ${env.port} (${env.nodeEnv})`);
+    console.log(`✅ Carles Inventaire — API démarrée sur le port ${env.port} (${env.nodeEnv})`);
   });
 
   // Arrêt propre
