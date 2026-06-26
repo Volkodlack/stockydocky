@@ -1,0 +1,18 @@
+{
+  "name": "inventpro-stock",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Application web de gestion de stock professionnelle (ERP / PWA)",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build:client": "npm --prefix client run build",
+    "build:server": "npm --prefix server run build",
+    "render-build": "npm --prefix client install --include=dev && npm --prefix client run build && npm --prefix server install --include=dev && npm --prefix server run prisma:generate && npm --prefix server run build && npm --prefix server run prisma:push && npm --prefix server run seed",
+    "render-start": "npm --prefix server run start"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

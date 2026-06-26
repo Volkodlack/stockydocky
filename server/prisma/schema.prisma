@@ -1,0 +1,278 @@
+// Schéma Prisma - Application de gestion de stock
+// Base de données : PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── ÉNUMÉRATIONS ─────────────────────────────
+
+enum Role {
+  ADMIN // Accès total
+  EMPLOYEE // Consultation + entrées + sorties
+  INVENTORY // Inventaires uniquement
+}
+
+enum MovementType {
+  // Entrées (quantité positive)
+  ENTRY_SIMPLE
+  ENTRY_SUPPLIER
+  ENTRY_IMPORT
+  // Sorties (quantité négative)
+  EXIT_SALE
+  EXIT_BREAKAGE
+  EXIT_LOSS
+  EXIT_SAV
+  EXIT_RETURN_SUPPLIER
+  EXIT_CORRECTION
+  // Mouvements système
+  DELIVERY_NOTE // Décrément lié à un bon de livraison validé
+  INVENTORY_ADJUSTMENT // Régularisation après inventaire
+}
+
+enum DeliveryStatus {
+  DRAFT
+  VALIDATED
+  CANCELLED
+}
+
+enum InventoryType {
+  FULL // Inventaire complet
+  ZONE // Inventaire par zone
+  ROLLING // Inventaire tournant
+}
+
+enum InventoryStatus {
+  IN_PROGRESS
+  VALIDATED
+  CANCELLED
+}
+
+// ────────────────────────────── UTILISATEURS ─────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(EMPLOYEE)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movements      StockMovement[]
+  deliveryNotes  DeliveryNote[]
+  inventories    Inventory[]
+  auditLogs      AuditLog[]
+
+  @@index([email])
+}
+
+// ──────────────────────────── RÉFÉRENTIELS ───────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  articles Article[]
+}
+
+model Zone {
+  id          String   @id @default(cuid())
+  code        String   @unique // Ex : A1-01, VITRINE, RESERVE
+  name        String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  articles    Article[]
+  inventories Inventory[]
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movements StockMovement[]
+
+  @@index([name])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveryNotes DeliveryNote[]
+
+  @@index([name])
+}
+
+// ──────────────────────────────── ARTICLES ───────────────────────────────
+
+model Article {
+  id            String   @id @default(cuid())
+  reference     String   @unique // Référence interne unique
+  barcode       String?  @unique // Code-barres EAN
+  brand         String?
+  name          String
+  description   String?
+  purchasePrice Decimal  @default(0) @db.Decimal(12, 2)
+  salePrice     Decimal  @default(0) @db.Decimal(12, 2)
+  stock         Int      @default(0)
+  minStock      Int      @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  zoneId     String?
+  zone       Zone?     @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  movements          StockMovement[]
+  deliveryNoteItems  DeliveryNoteItem[]
+  inventoryItems     InventoryItem[]
+
+  @@index([reference])
+  @@index([barcode])
+  @@index([brand])
+  @@index([name])
+  @@index([zoneId])
+  @@index([categoryId])
+}
+
+// ──────────────────────── MOUVEMENTS DE STOCK ────────────────────────────
+// Journal immuable de tous les mouvements. quantity est signé :
+// positif = entrée, négatif = sortie. stockAfter = stockBefore + quantity.
+
+model StockMovement {
+  id          String       @id @default(cuid())
+  type        MovementType
+  quantity    Int // signé (+ entrée / - sortie)
+  stockBefore Int
+  stockAfter  Int
+  reason      String? // motif libre ou complément
+  reference   String? // n° de document (réception, BL, etc.)
+  createdAt   DateTime     @default(now())
+
+  articleId  String
+  article    Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  @@index([articleId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+// ──────────────────────────── BONS DE LIVRAISON ──────────────────────────
+
+model DeliveryNote {
+  id        String         @id @default(cuid())
+  number    String         @unique // Ex : BL-2026-0001
+  date      DateTime       @default(now())
+  address   String?
+  notes     String?
+  signature String? // image base64 optionnelle
+  status    DeliveryStatus @default(DRAFT)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  items DeliveryNoteItem[]
+
+  @@index([status])
+  @@index([date])
+}
+
+model DeliveryNoteItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  unitPrice Decimal @default(0) @db.Decimal(12, 2)
+
+  deliveryNoteId String
+  deliveryNote   DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  articleId      String
+  article        Article      @relation(fields: [articleId], references: [id], onDelete: Restrict)
+
+  @@index([deliveryNoteId])
+}
+
+// ──────────────────────────────── INVENTAIRE ─────────────────────────────
+
+model Inventory {
+  id          String          @id @default(cuid())
+  reference   String          @unique // Ex : INV-2026-0001
+  type        InventoryType   @default(FULL)
+  status      InventoryStatus @default(IN_PROGRESS)
+  notes       String?
+  createdAt   DateTime        @default(now())
+  validatedAt DateTime?
+
+  zoneId String?
+  zone   Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  items InventoryItem[]
+
+  @@index([status])
+}
+
+// Zone reçoit aussi la relation inverse pour les inventaires
+// (déclarée ici pour rester lisible)
+model InventoryItem {
+  id             String @id @default(cuid())
+  theoreticalQty Int // stock théorique au moment de l'ouverture
+  countedQty     Int? // quantité comptée (null tant que non comptée)
+
+  inventoryId String
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  articleId   String
+  article     Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([inventoryId, articleId])
+  @@index([inventoryId])
+}
+
+// ─────────────────────────────── JOURNAL D'AUDIT ─────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String // Ex : "ARTICLE_CREATE", "DELIVERY_VALIDATE"
+  entity    String? // Ex : "Article"
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([action])
+}
