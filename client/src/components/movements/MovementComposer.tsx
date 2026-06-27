@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ScanLine, Plus, Trash2, Check, X, PackagePlus } from 'lucide-react';
 import { api, apiError } from '../../api/client';
-import type { SearchResultArticle, Supplier, MovementType } from '../../api/types';
+import type { SearchResultArticle, Supplier, MovementType, Article } from '../../api/types';
 import { formatEur, ENTRY_REASONS, EXIT_REASONS } from '../../lib/format';
 import { useToast } from '../../hooks/useToast';
 import { useBarcodeWedge } from '../../hooks/useBarcodeWedge';
 import { PageHeader, Card, Button, Input, Select, Field, EmptyState } from '../ui';
 import { ScannerModal } from '../scanner/ScannerModal';
+import { QuickAddArticleModal } from '../articles/QuickAddArticleModal';
 
 interface Line {
   articleId: string;
@@ -37,6 +38,7 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
   const [results, setResults] = useState<SearchResultArticle[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [quickAddCode, setQuickAddCode] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -109,11 +111,18 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
       });
       toast.success(`Ajouté : ${a.name}`);
     } catch (e) {
-      toast.error(apiError(e));
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        // Produit inconnu : on propose de le créer puis on l'ajoute à la ligne
+        setScanOpen(false);
+        setQuickAddCode(code);
+      } else {
+        toast.error(apiError(e));
+      }
     }
   };
 
-  useBarcodeWedge({ onScan: addByBarcode, enabled: !scanOpen });
+  useBarcodeWedge({ onScan: addByBarcode, enabled: !scanOpen && !quickAddCode });
 
   const setQty = (articleId: string, qty: number) =>
     setLines((prev) => prev.map((l) => (l.articleId === articleId ? { ...l, quantity: Math.max(1, qty) } : l)));
@@ -337,6 +346,28 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
         onDetected={(code) => {
           setScanOpen(false);
           void addByBarcode(code);
+        }}
+      />
+
+      <QuickAddArticleModal
+        open={!!quickAddCode}
+        barcode={quickAddCode ?? ''}
+        showStock={!isEntry}
+        onClose={() => setQuickAddCode(null)}
+        onCreated={(article: Article) => {
+          setQuickAddCode(null);
+          addArticle({
+            id: article.id,
+            reference: article.reference,
+            barcode: article.barcode ?? null,
+            brand: article.brand ?? null,
+            name: article.name,
+            stock: article.stock,
+            minStock: article.minStock,
+            salePrice: Number(article.salePrice),
+            zone: article.zone ?? null,
+          });
+          toast.success(`Article créé et ajouté : ${article.name}`);
         }}
       />
     </div>

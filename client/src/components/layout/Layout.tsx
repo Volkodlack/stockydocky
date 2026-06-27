@@ -17,10 +17,11 @@ import { ROLE_LABELS } from '../../lib/format';
 import { navForRole } from './nav';
 import { GlobalSearch } from './GlobalSearch';
 import { ScannerModal } from '../scanner/ScannerModal';
+import { QuickAddArticleModal } from '../articles/QuickAddArticleModal';
 import { useBarcodeWedge } from '../../hooks/useBarcodeWedge';
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, logout, hasRole } = useAuth();
   const { theme, toggle } = useTheme();
   const toast = useToast();
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export function Layout() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [quickAddCode, setQuickAddCode] = useState<string | null>(null);
   const [userMenu, setUserMenu] = useState(false);
 
   const sections = user ? navForRole(user.role) : [];
@@ -45,7 +47,18 @@ export function Layout() {
       navigate(`/articles/${res.data.id}`);
       toast.success(`Article trouvé : ${res.data.name}`);
     } catch (e) {
-      toast.error(apiError(e));
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        // Article inconnu : proposer la création directe (gestionnaires uniquement)
+        if (hasRole('ADMIN', 'EMPLOYEE')) {
+          setScanOpen(false);
+          setQuickAddCode(code);
+        } else {
+          toast.error(`Article inconnu (code ${code}).`);
+        }
+      } else {
+        toast.error(apiError(e));
+      }
     }
   };
 
@@ -54,8 +67,8 @@ export function Layout() {
     void lookupBarcode(code);
   };
 
-  // Douchette active globalement (sauf quand le scanner caméra est ouvert)
-  useBarcodeWedge({ onScan: lookupBarcode, enabled: !scanOpen });
+  // Douchette active globalement (sauf quand un scan ou la création est en cours)
+  useBarcodeWedge({ onScan: lookupBarcode, enabled: !scanOpen && !quickAddCode });
 
   const initials = user?.name
     ? user.name
@@ -215,6 +228,16 @@ export function Layout() {
       </div>
 
       <ScannerModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={onScanDetected} />
+
+      <QuickAddArticleModal
+        open={!!quickAddCode}
+        barcode={quickAddCode ?? ''}
+        onClose={() => setQuickAddCode(null)}
+        onCreated={(article) => {
+          setQuickAddCode(null);
+          navigate(`/articles/${article.id}`);
+        }}
+      />
     </div>
   );
 }
