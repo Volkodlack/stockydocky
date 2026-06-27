@@ -7,18 +7,17 @@ import { Button } from '../ui/Button';
 import { Spinner } from '../ui/Feedback';
 
 /**
- * Scanner code-barres via la caméra du smartphone.
+ * Scanner code-barres caméra — iOS (Safari) et Android (Chrome).
  *
- * Fonctionne sur iOS (Safari) et Android (Chrome) en demandant DIRECTEMENT la
- * caméra arrière via `facingMode: 'environment'` (et non en listant les caméras
- * par libellé — ces libellés sont vides tant que la permission n'est pas
- * accordée sur iOS, ce qui sélectionnait par erreur la caméra frontale).
- *
- * Prérequis : contexte sécurisé (HTTPS) — automatique sur Render.
+ * Points clés de fiabilité mobile :
+ *  - On acquiert le flux nous-mêmes via getUserMedia en demandant la caméra
+ *    ARRIÈRE (`facingMode: { exact: 'environment' }`), avec repli souple si
+ *    l'appareil n'a pas de caméra arrière (ex. ordinateur).
+ *  - Attributs iOS posés explicitement (playsinline + muted) et `play()` forcé.
+ *  - Contexte sécurisé (HTTPS) vérifié : la caméra est bloquée sinon.
+ *  - L'erreur technique réelle est affichée à l'écran pour faciliter le support.
  */
 
-// On restreint aux formats courants en magasin (codes-barres produits + QR) :
-// décodage plus rapide et plus fiable sur mobile.
 const hints = new Map<DecodeHintType, unknown>();
 hints.set(DecodeHintType.POSSIBLE_FORMATS, [
   BarcodeFormat.EAN_13,
@@ -33,6 +32,11 @@ hints.set(DecodeHintType.POSSIBLE_FORMATS, [
   BarcodeFormat.DATA_MATRIX,
 ]);
 
+interface ErrInfo {
+  friendly: string;
+  detail: string;
+}
+
 export function ScannerModal({
   open,
   onClose,
@@ -46,19 +50,26 @@ export function ScannerModal({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
 
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [activeDeviceId, setActiveDeviceId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ErrInfo | null>(null);
   const [starting, setStarting] = useState(true);
 
-  // Arrêt complet : contrôles zxing + pistes vidéo (évite la caméra qui reste
-  // allumée sur iOS) + détachement du flux.
   const stop = useCallback(() => {
-    controlsRef.current?.stop();
+    try {
+      controlsRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
     controlsRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
     const v = videoRef.current;
     if (v && v.srcObject) {
       (v.srcObject as MediaStream).getTracks().forEach((t) => t.stop());
@@ -66,7 +77,6 @@ export function ScannerModal({
     }
   }, []);
 
-  // Callback de décodage (appelé en continu ; on n'agit qu'en cas de résultat).
   const handleResult = useCallback(
     (result: { getText: () => string } | undefined, _err: unknown, controls: IScannerControls) => {
       controlsRef.current = controls;
@@ -79,7 +89,31 @@ export function ScannerModal({
     [stop],
   );
 
-  // Démarre la caméra. Sans `deviceId` → caméra arrière via facingMode.
+  const describe = (e: unknown): ErrInfo => {
+    const err = e as { name?: string; message?: string };
+    const name = err?.name ?? '';
+    const message = err?.message ?? String(e);
+    let friendly: string;
+    switch (name) {
+      case 'NotAllowedError':
+      case 'SecurityError':
+        friendly =
+          "Accès à la caméra refusé. Autorisez la caméra pour ce site dans les réglages du navigateur, puis réessayez.";
+        break;
+      case 'NotFoundError':
+      case 'OverconstrainedError':
+        friendly = "Aucune caméra utilisable n'a été trouvée sur l'appareil.";
+        break;
+      case 'NotReadableError':
+      case 'AbortError':
+        friendly = 'La caméra est déjà utilisée par une autre application. Fermez-la puis réessayez.';
+        break;
+      default:
+        friendly = 'Impossible de démarrer la caméra. Vérifiez les autorisations puis réessayez.';
+    }
+    return { friendly, detail: name ? `${name} — ${message}` : message };
+  };
+
   const start = useCallback(
     async (deviceId?: string) => {
       const video = videoRef.current;
@@ -87,12 +121,22 @@ export function ScannerModal({
       setStarting(true);
       setError(null);
 
-      // getUserMedia n'existe qu'en contexte sécurisé (HTTPS) ou sur localhost.
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setError('La caméra nécessite une connexion sécurisée (HTTPS).');
+      // Contexte sécurisé obligatoire (HTTPS), sauf localhost.
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setError({
+          friendly:
+            "La caméra exige une connexion sécurisée (HTTPS). Ouvrez le site via son adresse https:// (l'URL Render), pas via une adresse IP en http://.",
+          detail: `isSecureContext=${window.isSecureContext}, mediaDevices=${!!navigator.mediaDevices}`,
+        });
         setStarting(false);
         return;
       }
+
+      // Attributs nécessaires à la lecture inline sur iOS.
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.setAttribute('muted', 'true');
+      video.muted = true;
 
       const reader = new BrowserMultiFormatReader(hints, {
         delayBetweenScanAttempts: 100,
@@ -100,65 +144,68 @@ export function ScannerModal({
       });
 
       try {
+        let stream: MediaStream;
         if (deviceId) {
-          controlsRef.current = await reader.decodeFromVideoDevice(deviceId, video, handleResult);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: deviceId } },
+            audio: false,
+          });
         } else {
-          // Caméra ARRIÈRE en priorité (ideal → repli automatique sur desktop).
-          controlsRef.current = await reader.decodeFromConstraints(
-            {
+          // 1) On force la caméra arrière…
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { exact: 'environment' } },
               audio: false,
-              video: {
-                facingMode: { ideal: 'environment' },
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-              },
-            },
-            video,
-            handleResult,
-          );
+            });
+          } catch (err) {
+            // 2) …et si l'appareil n'en a pas (ordinateur), repli souple.
+            const n = (err as { name?: string })?.name;
+            if (n === 'OverconstrainedError' || n === 'NotFoundError') {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' },
+                audio: false,
+              });
+            } else {
+              throw err;
+            }
+          }
+        }
+
+        streamRef.current = stream;
+        controlsRef.current = await reader.decodeFromStream(stream, video, handleResult);
+        // play() explicite (certaines versions d'iOS ne démarrent pas seules)
+        try {
+          await video.play();
+        } catch {
+          /* déjà en lecture ou bloqué silencieusement */
         }
         setStarting(false);
 
-        // La permission étant accordée, les libellés sont désormais lisibles :
-        // on liste les caméras pour proposer un bouton « changer » si plusieurs.
+        // Permission accordée → libellés disponibles : on prépare le switch.
         try {
           const all = await navigator.mediaDevices.enumerateDevices();
           const cams = all.filter((d) => d.kind === 'videoinput');
           setDevices(cams);
           const current =
-            (video.srcObject as MediaStream | null)?.getVideoTracks()[0]?.getSettings().deviceId ??
-            deviceId ??
-            null;
+            stream.getVideoTracks()[0]?.getSettings().deviceId ?? deviceId ?? null;
           setActiveDeviceId(current);
         } catch {
-          /* énumération non critique */
+          /* non critique */
         }
       } catch (e) {
-        const name = (e as { name?: string })?.name ?? '';
-        if (name === 'NotAllowedError' || name === 'SecurityError') {
-          setError(
-            "Accès à la caméra refusé. Autorisez la caméra pour ce site dans les réglages du navigateur, puis réessayez.",
-          );
-        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-          setError('Aucune caméra arrière détectée. Essayez de changer de caméra.');
-        } else if (name === 'NotReadableError') {
-          setError('La caméra est déjà utilisée par une autre application. Fermez-la puis réessayez.');
-        } else {
-          setError('Impossible de démarrer la caméra. Vérifiez les autorisations puis réessayez.');
-        }
+        stop();
+        setError(describe(e));
         setStarting(false);
       }
     },
-    [handleResult],
+    [handleResult, stop],
   );
 
-  // Démarrage à l'ouverture, arrêt à la fermeture.
   useEffect(() => {
     if (!open) {
       stop();
       return;
     }
-    // léger délai : laisse le <video> se monter dans la modale (portail)
     const id = setTimeout(() => void start(), 60);
     return () => {
       clearTimeout(id);
@@ -184,8 +231,8 @@ export function ScannerModal({
       footer={
         <>
           {error ? (
-            <Button variant="secondary" onClick={() => void start()}>
-              <RotateCcw size={16} /> Réessayer
+            <Button variant="primary" onClick={() => void start()}>
+              <RotateCcw size={16} /> Activer la caméra
             </Button>
           ) : (
             devices.length > 1 && (
@@ -205,7 +252,6 @@ export function ScannerModal({
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video ref={videoRef} className="h-full w-full object-cover" muted autoPlay playsInline />
 
-          {/* Réticule de visée */}
           {!error && !starting && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div className="h-28 w-4/5 rounded-lg border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.30)]" />
@@ -222,7 +268,8 @@ export function ScannerModal({
           {error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-white/90">
               <CameraOff size={32} />
-              <span className="text-sm leading-relaxed">{error}</span>
+              <span className="text-sm leading-relaxed">{error.friendly}</span>
+              <span className="max-w-full break-words font-mono text-[10px] text-white/50">{error.detail}</span>
             </div>
           )}
         </div>
