@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Package,
   Pencil,
+  Trash2,
   SlidersHorizontal,
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -16,7 +17,7 @@ import type { Article } from '../api/types';
 import { formatEur, formatDateTime, MOVEMENT_LABELS, isEntry, stockStatus, STOCK_STATUS_LABELS } from '../lib/format';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { Button, Card, Modal, Field, Input, Textarea, PageLoader, EmptyState, Badge } from '../components/ui';
+import { Button, Card, Modal, Field, Input, Textarea, PageLoader, EmptyState, Badge, useConfirm } from '../components/ui';
 
 export function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,8 @@ export function ArticleDetailPage() {
   const { hasRole } = useAuth();
   const toast = useToast();
   const canEdit = hasRole('ADMIN', 'EMPLOYEE');
+  const canDelete = hasRole('ADMIN', 'EMPLOYEE');
+  const { confirm, dialog } = useConfirm();
 
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +71,28 @@ export function ArticleDetailPage() {
       toast.error(apiError(e));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!article) return;
+    const ok = await confirm({
+      title: 'Supprimer cet article',
+      message: `Voulez-vous vraiment supprimer « ${article.name} » ? Si des mouvements existent, l\u2019article sera désactivé (historique conservé).`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const res = await api.delete(`/articles/${article.id}`);
+      if (res.data?.deactivated) {
+        toast.info('Article désactivé : des mouvements existent, l\u2019historique est conservé.');
+      } else {
+        toast.success('Article supprimé.');
+      }
+      navigate('/articles');
+    } catch (e) {
+      toast.error(apiError(e));
     }
   };
 
@@ -128,14 +153,23 @@ export function ArticleDetailPage() {
               <Price label="Marge" value={formatEur(margin)} accent={margin >= 0} />
             </div>
 
-            {canEdit && (
+            {(canEdit || canDelete) && (
               <div className="mt-5 flex flex-col gap-2">
-                <Button onClick={openAdjust} fullWidth>
-                  <SlidersHorizontal size={18} /> Ajuster le stock
-                </Button>
-                <Button variant="outline" fullWidth onClick={() => navigate('/articles', { state: { edit: article.id } })}>
-                  <Pencil size={16} /> Modifier la fiche
-                </Button>
+                {canEdit && (
+                  <>
+                    <Button onClick={openAdjust} fullWidth>
+                      <SlidersHorizontal size={18} /> Ajuster le stock
+                    </Button>
+                    <Button variant="outline" fullWidth onClick={() => navigate('/articles', { state: { edit: article.id } })}>
+                      <Pencil size={16} /> Modifier la fiche
+                    </Button>
+                  </>
+                )}
+                {canDelete && (
+                  <Button variant="danger" fullWidth onClick={remove}>
+                    <Trash2 size={16} /> Supprimer l'article
+                  </Button>
+                )}
               </div>
             )}
           </Card>
@@ -233,6 +267,8 @@ export function ArticleDetailPage() {
           )}
         </div>
       </Modal>
+
+      {dialog}
     </div>
   );
 }

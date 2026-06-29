@@ -42,7 +42,7 @@ export function ArticlesPage() {
   const { confirm, dialog } = useConfirm();
 
   const canEdit = hasRole('ADMIN', 'EMPLOYEE');
-  const canDelete = hasRole('ADMIN');
+  const canDelete = hasRole('ADMIN', 'EMPLOYEE');
 
   const [data, setData] = useState<Paginated<Article> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,8 +161,12 @@ export function ArticlesPage() {
     });
     if (!ok) return;
     try {
-      await api.delete(`/articles/${a.id}`);
-      toast.success('Article supprimé.');
+      const res = await api.delete(`/articles/${a.id}`);
+      if (res.data?.deactivated) {
+        toast.info('Article désactivé : des mouvements existent, l\u2019historique est conservé.');
+      } else {
+        toast.success('Article supprimé.');
+      }
       load();
     } catch (e) {
       toast.error(apiError(e));
@@ -357,6 +361,28 @@ export function ArticlesPage() {
                     <p className="text-sm font-bold tabular-nums text-slate-800 dark:text-slate-100">{a.stock}</p>
                     <StockBadge stock={a.stock} minStock={a.minStock} />
                   </div>
+                  {(canEdit || canDelete) && (
+                    <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {canEdit && (
+                        <button
+                          onClick={() => openEdit(a)}
+                          className="rounded-lg p-2 text-slate-400 transition active:bg-slate-100 dark:active:bg-surface-700"
+                          aria-label="Modifier"
+                        >
+                          <Pencil size={18} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => remove(a)}
+                          className="rounded-lg p-2 text-slate-400 transition active:bg-red-50 active:text-red-600 dark:active:bg-red-500/10"
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { asyncHandler, authenticate } from '../middleware/auth';
-import { adminOnly, staff } from '../middleware/roles';
+import { staff } from '../middleware/roles';
 import { badRequest, logAction, notFound } from '../utils/helpers';
 
 const router = Router();
@@ -138,10 +138,10 @@ router.put(
   }),
 );
 
-// DELETE /api/articles/:id — suppression (admin uniquement)
+// DELETE /api/articles/:id — suppression (admin/employé ; désactivation si mouvements)
 router.delete(
   '/:id',
-  adminOnly,
+  staff,
   asyncHandler(async (req, res) => {
     const movements = await prisma.stockMovement.count({ where: { articleId: req.params.id } });
     if (movements > 0) {
