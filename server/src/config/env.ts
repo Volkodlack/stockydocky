@@ -18,6 +18,6 @@ export const env = {
   jwtSecret: required('JWT_SECRET', 'dev-secret-change-me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
-  seedAdminEmail: process.env.SEED_ADMIN_EMAIL ?? 'admin@carles.local',
+  seedAdminUsername: process.env.SEED_ADMIN_USERNAME ?? 'admin',
   seedAdminPassword: process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!',
 };

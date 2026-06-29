@@ -57,7 +57,7 @@ enum InventoryStatus {
 
 model User {
   id        String   @id @default(cuid())
-  email     String   @unique
+  username  String   @unique @map("email")
   password  String
   name      String
   role      Role     @default(EMPLOYEE)
@@ -70,7 +70,7 @@ model User {
   inventories    Inventory[]
   auditLogs      AuditLog[]
 
-  @@index([email])
+  @@index([username])
 }
 
 // ──────────────────────────── RÉFÉRENTIELS ───────────────────────────────

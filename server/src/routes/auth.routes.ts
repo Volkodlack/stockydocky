@@ -8,7 +8,7 @@ import { logAction, unauthorized } from '../utils/helpers';
 const router = Router();
 
 const loginSchema = z.object({
-  email: z.string().email('Email invalide'),
+  username: z.string().min(1, 'Identifiant requis'),
   password: z.string().min(1, 'Mot de passe requis'),
 });
 
@@ -16,9 +16,9 @@ const loginSchema = z.object({
 router.post(
   '/login',
   asyncHandler(async (req, res) => {
-    const { email, password } = loginSchema.parse(req.body);
+    const { username, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const user = await prisma.user.findUnique({ where: { username: username.trim().toLowerCase() } });
     if (!user || !user.active) {
       throw unauthorized('Identifiants incorrects');
     }
@@ -27,12 +27,12 @@ router.post(
       throw unauthorized('Identifiants incorrects');
     }
 
-    const token = signToken({ sub: user.id, email: user.email, role: user.role, name: user.name });
+    const token = signToken({ sub: user.id, username: user.username, role: user.role, name: user.name });
     await logAction(user.id, 'AUTH_LOGIN', 'User', user.id);
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, username: user.username, name: user.name, role: user.role },
     });
   }),
 );
@@ -44,7 +44,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.sub },
-      select: { id: true, email: true, name: true, role: true, active: true },
+      select: { id: true, username: true, name: true, role: true, active: true },
     });
     if (!user || !user.active) throw unauthorized('Session invalide');
     res.json({ user });

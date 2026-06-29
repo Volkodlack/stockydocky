@@ -123,7 +123,7 @@ Le dépôt contient un **blueprint** `render.yaml` qui crée tout automatiquemen
    - crée les tables (`prisma db push`) et insère les données initiales (seed),
    - sert l'API sous `/api` et le frontend React buildé sur la même URL.
 
-Variables d'environnement (gérées par le blueprint) : `DATABASE_URL` (auto), `JWT_SECRET` (auto-généré), `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`.
+Variables d'environnement (gérées par le blueprint) : `DATABASE_URL` (auto), `JWT_SECRET` (auto-généré), `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD`.
 
 > ⚠️ **Sécurité** : après le premier déploiement, connectez-vous et **changez le mot de passe administrateur** (et idéalement les comptes de démonstration).
 
@@ -133,13 +133,13 @@ Variables d'environnement (gérées par le blueprint) : `DATABASE_URL` (auto), `
 
 Créés automatiquement par le seed :
 
-| Rôle | Email | Mot de passe |
+| Rôle | Identifiant | Mot de passe |
 |------|-------|--------------|
-| Administrateur | `admin@carles.local` | `Admin123!` |
-| Employé | `employe@carles.local` | `Employe123!` |
-| Inventaire | `inventaire@carles.local` | `Invent123!` |
+| Administrateur | `admin` | `Admin123!` |
+| Employé | `employe` | `Employe123!` |
+| Inventaire | `inventaire` | `Invent123!` |
 
-L'email/mot de passe administrateur sont configurables via les variables `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`.
+L'identifiant et le mot de passe administrateur sont configurables via les variables `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD`.
 
 ---
 

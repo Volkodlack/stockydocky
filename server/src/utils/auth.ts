@@ -5,7 +5,7 @@ import type { Role } from '@prisma/client';
 
 export interface TokenPayload {
   sub: string; // id utilisateur
-  email: string;
+  username: string;
   role: Role;
   name: string;
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { User, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiError } from '../api/client';
 import { Button, Field, Input } from '../components/ui';
@@ -11,7 +11,7 @@ export function LoginPage() {
   const location = useLocation();
   const from = (location.state as { from?: string })?.from ?? '/';
 
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ export function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(username.trim(), password);
       navigate(from, { replace: true });
     } catch (e) {
       setError(apiError(e));
@@ -55,17 +55,20 @@ export function LoginPage() {
             }}
             className="space-y-4"
           >
-            <Field label="Adresse e-mail" htmlFor="email">
+            <Field label="Identifiant" htmlFor="username">
               <div className="relative">
-                <Mail size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <User size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <Input
-                  id="email"
-                  type="email"
+                  id="username"
+                  type="text"
                   autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vous@exemple.fr"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="ex. admin"
                   className="pl-10"
                 />
               </div>

@@ -85,8 +85,8 @@ export function SettingsPage() {
               <dd className="font-medium text-slate-800 dark:text-slate-100">{user?.name}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500 dark:text-slate-400">E-mail</dt>
-              <dd className="font-medium text-slate-800 dark:text-slate-100">{user?.email}</dd>
+              <dt className="text-slate-500 dark:text-slate-400">Identifiant</dt>
+              <dd className="font-medium text-slate-800 dark:text-slate-100">{user?.username}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-slate-500 dark:text-slate-400">Rôle</dt>

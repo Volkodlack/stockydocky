@@ -21,7 +21,7 @@ export type InventoryStatus = 'IN_PROGRESS' | 'VALIDATED' | 'CANCELLED';
 
 export interface AuthUser {
   id: string;
-  email: string;
+  username: string;
   name: string;
   role: Role;
 }
@@ -181,7 +181,7 @@ export interface SearchResultArticle {
 
 export interface User {
   id: string;
-  email: string;
+  username: string;
   name: string;
   role: Role;
   active: boolean;
@@ -195,5 +195,5 @@ export interface AuditEntry {
   entityId?: string | null;
   details?: Record<string, unknown> | null;
   createdAt: string;
-  user?: { name: string; email: string } | null;
+  user?: { name: string; username: string } | null;
 }

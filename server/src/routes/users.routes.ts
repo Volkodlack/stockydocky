@@ -9,10 +9,10 @@ import { badRequest, logAction } from '../utils/helpers';
 const router = Router();
 router.use(authenticate, adminOnly);
 
-const select = { id: true, email: true, name: true, role: true, active: true, createdAt: true } as const;
+const select = { id: true, username: true, name: true, role: true, active: true, createdAt: true } as const;
 
 const createSchema = z.object({
-  email: z.string().email().transform((s) => s.toLowerCase()),
+  username: z.string().min(1, 'Identifiant requis').transform((s) => s.trim().toLowerCase()),
   name: z.string().min(1, 'Nom requis'),
   password: z.string().min(6, 'Mot de passe : 6 caractères minimum'),
   role: z.enum(['ADMIN', 'EMPLOYEE', 'INVENTORY']).default('EMPLOYEE'),
@@ -43,7 +43,7 @@ router.post(
       data: { ...body, password: await hashPassword(body.password) },
       select,
     });
-    await logAction(req.user!.sub, 'USER_CREATE', 'User', user.id, { email: user.email, role: user.role });
+    await logAction(req.user!.sub, 'USER_CREATE', 'User', user.id, { username: user.username, role: user.role });
     res.status(201).json(user);
   }),
 );

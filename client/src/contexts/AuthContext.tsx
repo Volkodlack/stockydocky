@@ -5,7 +5,7 @@ import type { AuthUser, Role } from '../api/types';
 interface AuthCtx {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   hasRole: (...roles: Role[]) => boolean;
 }
@@ -40,8 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const res = await api.post('/auth/login', { email, password });
+  const login = async (username: string, password: string) => {
+    const res = await api.post('/auth/login', { username, password });
     tokenStore.set(res.data.token);
     setUser(res.data.user);
   };

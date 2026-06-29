@@ -29,8 +29,8 @@ services:
         value: 7d
       # Identifiants du compte administrateur créé au premier déploiement (seed).
       # À MODIFIER après la première connexion.
-      - key: SEED_ADMIN_EMAIL
-        value: admin@carles.local
+      - key: SEED_ADMIN_USERNAME
+        value: admin
       - key: SEED_ADMIN_PASSWORD
         value: Admin123!
       # Identité émettrice des bons de livraison (PDF). Personnalisez ces valeurs.

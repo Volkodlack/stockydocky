@@ -37,7 +37,7 @@ export function UsersPage() {
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('EMPLOYEE');
   const [active, setActive] = useState(true);
@@ -56,7 +56,7 @@ export function UsersPage() {
   const openCreate = () => {
     setEditing(null);
     setName('');
-    setEmail('');
+    setUsername('');
     setPassword('');
     setRole('EMPLOYEE');
     setActive(true);
@@ -65,7 +65,7 @@ export function UsersPage() {
   const openEdit = (u: User) => {
     setEditing(u);
     setName(u.name);
-    setEmail(u.email);
+    setUsername(u.username);
     setPassword('');
     setRole(u.role);
     setActive(u.active);
@@ -76,12 +76,12 @@ export function UsersPage() {
     setSaving(true);
     try {
       if (editing) {
-        const payload: Record<string, unknown> = { name: name.trim(), email: email.trim(), role, active };
+        const payload: Record<string, unknown> = { name: name.trim(), username: username.trim(), role, active };
         if (password.trim()) payload.password = password;
         await api.put(`/users/${editing.id}`, payload);
         toast.success('Utilisateur mis à jour.');
       } else {
-        await api.post('/users', { name: name.trim(), email: email.trim(), password, role });
+        await api.post('/users', { name: name.trim(), username: username.trim(), password, role });
         toast.success('Utilisateur créé.');
       }
       setModalOpen(false);
@@ -110,7 +110,7 @@ export function UsersPage() {
     }
   };
 
-  const valid = name.trim() && email.trim() && (editing || password.length >= 6);
+  const valid = name.trim() && username.trim() && (editing || password.length >= 6);
 
   return (
     <div>
@@ -143,7 +143,7 @@ export function UsersPage() {
                     {current?.id === u.id && <Badge color="green">Vous</Badge>}
                     {!u.active && <Badge color="gray">Désactivé</Badge>}
                   </div>
-                  <p className="truncate text-sm text-slate-500 dark:text-slate-400">{u.email}</p>
+                  <p className="truncate text-sm text-slate-500 dark:text-slate-400">{u.username}</p>
                   <p className="text-xs text-slate-400">Créé le {formatDate(u.createdAt)}</p>
                 </div>
                 <Badge color={ROLE_COLORS[u.role]}>
@@ -192,8 +192,17 @@ export function UsersPage() {
           <Field label="Nom complet" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jean Dupont" />
           </Field>
-          <Field label="Adresse e-mail" required>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jean@magasin.fr" />
+          <Field label="Identifiant" required hint={editing ? "L'identifiant n'est pas modifiable." : 'Servira à la connexion (ex. jdupont)'}>
+            <Input
+              type="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="ex. jdupont"
+              disabled={!!editing}
+            />
           </Field>
           <Field label={editing ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe'} required={!editing} hint="6 caractères minimum">
             <Input

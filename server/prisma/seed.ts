@@ -9,7 +9,7 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@carles.local';
+const ADMIN_USERNAME = (process.env.SEED_ADMIN_USERNAME ?? 'admin').trim().toLowerCase();
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!';
 
 async function main() {
@@ -18,10 +18,10 @@ async function main() {
   // ───────────────────────── Utilisateurs ─────────────────────────
   const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
   await prisma.user.upsert({
-    where: { email: ADMIN_EMAIL },
+    where: { username: ADMIN_USERNAME },
     update: { role: 'ADMIN', active: true },
     create: {
-      email: ADMIN_EMAIL,
+      username: ADMIN_USERNAME,
       password: adminHash,
       name: 'Administrateur',
       role: 'ADMIN',
@@ -30,10 +30,10 @@ async function main() {
 
   const employeeHash = await bcrypt.hash('Employe123!', 10);
   await prisma.user.upsert({
-    where: { email: 'employe@carles.local' },
+    where: { username: 'employe' },
     update: {},
     create: {
-      email: 'employe@carles.local',
+      username: 'employe',
       password: employeeHash,
       name: 'Employé Démo',
       role: 'EMPLOYEE',
@@ -42,10 +42,10 @@ async function main() {
 
   const inventoryHash = await bcrypt.hash('Invent123!', 10);
   await prisma.user.upsert({
-    where: { email: 'inventaire@carles.local' },
+    where: { username: 'inventaire' },
     update: {},
     create: {
-      email: 'inventaire@carles.local',
+      username: 'inventaire',
       password: inventoryHash,
       name: 'Agent Inventaire',
       role: 'INVENTORY',
@@ -174,9 +174,9 @@ async function main() {
   }
 
   console.log('✅ Données prêtes.');
-  console.log(`   Admin     : ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
-  console.log('   Employé   : employe@carles.local / Employe123!');
-  console.log('   Inventaire: inventaire@carles.local / Invent123!');
+  console.log(`   Admin      : ${ADMIN_USERNAME} / ${ADMIN_PASSWORD}`);
+  console.log('   Employé    : employe / Employe123!');
+  console.log('   Inventaire : inventaire / Invent123!');
 }
 
 main()

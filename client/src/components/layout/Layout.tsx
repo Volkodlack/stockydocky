@@ -199,7 +199,7 @@ export function Layout() {
                 <div className="absolute right-0 z-20 mt-2 w-56 animate-scale-in rounded-xl border border-slate-200 bg-white p-1.5 shadow-soft dark:border-slate-800 dark:bg-surface-900">
                   <div className="border-b border-slate-100 px-3 py-2.5 dark:border-slate-800">
                     <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{user?.name}</p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.email}</p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user?.username}</p>
                     <p className="mt-1 inline-block rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
                       {user ? ROLE_LABELS[user.role] : ''}
                     </p>

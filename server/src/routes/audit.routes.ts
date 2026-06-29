@@ -21,7 +21,7 @@ router.get(
     const [items, total] = await Promise.all([
       prisma.auditLog.findMany({
         where,
-        include: { user: { select: { name: true, email: true } } },
+        include: { user: { select: { name: true, username: true } } },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
