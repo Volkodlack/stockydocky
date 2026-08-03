@@ -2,10 +2,15 @@
 # Doc : https://render.com/docs/blueprint-spec
 #
 # 1 service web Node (sert l'API REST + le frontend React buildé)
-# 1 base de données PostgreSQL managée
+# La base de données PostgreSQL est hébergée GRATUITEMENT sur Neon (neon.tech),
+# et non sur Render (dont la base gratuite expire au bout de 30 jours).
 #
-# Déploiement : connecter le dépôt Git à Render -> "New Blueprint" -> ce fichier
-# est détecté automatiquement.
+# AVANT le déploiement :
+#   1. Crée un projet PostgreSQL gratuit sur https://neon.tech
+#   2. Copie la chaîne de connexion DIRECTE (voir README)
+#   3. Sur Render, renseigne la variable DATABASE_URL avec cette chaîne
+#
+# Déploiement : connecter le dépôt Git à Render -> "New Blueprint".
 
 services:
   - type: web
@@ -19,10 +24,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Chaîne de connexion PostgreSQL (Neon). À COLLER dans le tableau de bord
+      # Render (Environment) — elle n'est pas versionnée pour rester secrète.
+      # Format : postgresql://user:password@ep-xxx.eu-central-1.aws.neon.tech/dbname?sslmode=require
       - key: DATABASE_URL
-        fromDatabase:
-          name: carles-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
@@ -38,10 +44,3 @@ services:
         value: SAS Carles
       - key: PDF_VAT_RATE
         value: "20"
-
-databases:
-  - name: carles-db
-    plan: free
-    region: frankfurt
-    databaseName: carles
-    user: carles

@@ -27,7 +27,7 @@ Monorepo : **backend** Node + Express + Prisma + PostgreSQL, **frontend** React 
 | Frontend | React 18, TypeScript, Vite, React Router, Tailwind CSS, Recharts, @zxing/browser (scan caméra), PWA (service worker) |
 | Backend | Node 20, Express, Prisma ORM, PostgreSQL, JWT (auth), Zod (validation), PDFKit (PDF), ExcelJS (export), Multer + csv-parse (import) |
 | Sécurité | Helmet, CORS, rate-limiting, hash bcrypt, rôles, journal d'audit |
-| Déploiement | Render (1 service web + 1 base PostgreSQL managée) |
+| Déploiement | Render (service web, gratuit) + Neon (PostgreSQL, gratuit) |
 
 Polices auto-hébergées (Inter + Space Grotesk via `@fontsource`) — **aucun appel externe**, conforme RGPD.
 
@@ -59,7 +59,7 @@ Le tout en **PWA installable**, responsive (mobile/tablette/desktop), avec **mod
 ```
 carles-inventaire/
 ├── package.json            # scripts monorepo (render-build / render-start)
-├── render.yaml             # blueprint Render (service web + base PostgreSQL)
+├── render.yaml             # blueprint Render (service web ; base PostgreSQL externe via DATABASE_URL)
 ├── server/                 # API REST + service du frontend buildé
 │   ├── prisma/
 │   │   ├── schema.prisma   # modèle de données complet
@@ -111,21 +111,39 @@ Le front de développement (port 5173) appelle automatiquement l'API (port 4000)
 
 ---
 
-## Déploiement sur Render
+## Déploiement (Render + base Neon gratuite)
 
-Le dépôt contient un **blueprint** `render.yaml` qui crée tout automatiquement.
+L'application tourne sur un service web **Render** (gratuit), et la base de données PostgreSQL est hébergée gratuitement sur **[Neon](https://neon.tech)** (0,5 Go, sans carte bancaire, n'expire pas). On évite ainsi la base Render, dont l'offre gratuite expire au bout de 30 jours.
+
+### 1. Créer la base sur Neon
+
+1. Créer un compte sur **https://neon.tech** (connexion via GitHub/Google, sans carte).
+2. **Create project** → choisir une région proche (ex. *Europe (Frankfurt)*) → créer.
+3. Dans **Connect** (ou *Connection Details*), **décocher/désactiver « Connection pooling »** pour obtenir la chaîne **directe**, puis copier la chaîne de connexion. Elle ressemble à :
+   ```
+   postgresql://user:motdepasse@ep-xxxx.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&connect_timeout=15
+   ```
+   > **Important :** utiliser la chaîne **directe** (sans `-pooler` dans l'hôte). Prisma en a besoin pour créer les tables au déploiement (`prisma db push`) : la chaîne « pooler » ferait échouer cette étape.
+   >
+   > Le paramètre `&connect_timeout=15` évite un time-out au premier accès, le temps que la base Neon (en veille) se réactive.
+
+### 2. Déployer sur Render
 
 1. Pousser ce projet sur un dépôt Git (GitHub/GitLab).
 2. Sur Render : **New → Blueprint**, sélectionner le dépôt. Le `render.yaml` est détecté.
-3. Render crée le service web **et** la base PostgreSQL, puis lance le build :
-   - installe le client et le serveur,
-   - **génère le client Prisma**, compile TypeScript,
-   - crée les tables (`prisma db push`) et insère les données initiales (seed),
+3. Render demande la valeur de **`DATABASE_URL`** (marquée « sync: false ») : y **coller la chaîne Neon** copiée à l'étape 1.
+4. Valider. Render lance le build :
+   - installe le client et le serveur, **génère le client Prisma**, compile TypeScript,
+   - crée les tables (`prisma db push`) sur Neon et insère les données initiales (seed),
    - sert l'API sous `/api` et le frontend React buildé sur la même URL.
 
-Variables d'environnement (gérées par le blueprint) : `DATABASE_URL` (auto), `JWT_SECRET` (auto-généré), `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD`.
+Les autres variables sont gérées par le blueprint : `JWT_SECRET` (auto-généré), `SEED_ADMIN_USERNAME`, `SEED_ADMIN_PASSWORD`, `COMPANY_NAME`, `PDF_VAT_RATE`.
 
-> ⚠️ **Sécurité** : après le premier déploiement, connectez-vous et **changez le mot de passe administrateur** (et idéalement les comptes de démonstration).
+> ⚠️ **Sécurité** : après le premier déploiement, connectez-vous (`admin` / `Admin123!`) et **changez le mot de passe administrateur**.
+
+> 💤 **Mises en veille (offres gratuites)** : Neon et le service web Render se mettent en veille après quelques minutes d'inactivité et se réveillent tout seuls à la requête suivante (léger délai au premier accès). C'est normal sur les offres gratuites.
+
+**Autres bases gratuites compatibles** (même principe : coller la chaîne dans `DATABASE_URL`) : **Supabase** (500 Mo, mais met le projet en pause après 7 jours d'inactivité, à réactiver manuellement) ou **Aiven**. N'importe quel PostgreSQL fait l'affaire.
 
 ---
 
