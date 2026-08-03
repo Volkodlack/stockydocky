@@ -2,7 +2,7 @@ import { Router } from 'express';
 import ExcelJS from 'exceljs';
 import { prisma } from '../config/prisma';
 import { asyncHandler, authenticate } from '../middleware/auth';
-import { logAction } from '../utils/helpers';
+import { logAction, isAdminReq } from '../utils/helpers';
 
 const router = Router();
 router.use(authenticate);
@@ -25,9 +25,10 @@ router.get(
       include: { zone: true, category: true },
       orderBy: { name: 'asc' },
     });
+    const admin = isAdminReq(req);
     const headers = [
       'reference', 'barcode', 'brand', 'name', 'description',
-      'purchasePrice', 'salePrice', 'stock', 'minStock', 'zone', 'category', 'active',
+      'purchasePrice', ...(admin ? ['salePrice'] : []), 'stock', 'minStock', 'zone', 'category', 'active',
     ];
     const rows = articles.map((a) => ({
       reference: a.reference,
@@ -62,13 +63,14 @@ router.get(
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Carles Inventaire';
     const ws = wb.addWorksheet('Articles');
+    const admin = isAdminReq(req);
     ws.columns = [
       { header: 'Référence', key: 'reference', width: 16 },
       { header: 'Code-barres', key: 'barcode', width: 16 },
       { header: 'Marque', key: 'brand', width: 16 },
       { header: 'Nom', key: 'name', width: 30 },
       { header: 'Prix achat', key: 'purchasePrice', width: 12 },
-      { header: 'Prix vente', key: 'salePrice', width: 12 },
+      ...(admin ? [{ header: 'Prix vente', key: 'salePrice', width: 12 }] : []),
       { header: 'Stock', key: 'stock', width: 10 },
       { header: 'Stock min', key: 'minStock', width: 10 },
       { header: 'Zone', key: 'zone', width: 12 },
@@ -93,7 +95,7 @@ router.get(
         value: a.stock * Number(a.purchasePrice),
       });
     });
-    ['purchasePrice', 'salePrice', 'value'].forEach((k) => {
+    ['purchasePrice', ...(admin ? ['salePrice'] : []), 'value'].forEach((k) => {
       ws.getColumn(k).numFmt = '#,##0.00 €';
     });
 

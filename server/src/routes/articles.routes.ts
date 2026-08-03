@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { asyncHandler, authenticate } from '../middleware/auth';
 import { staff } from '../middleware/roles';
-import { badRequest, logAction, notFound } from '../utils/helpers';
+import { badRequest, logAction, notFound, isAdminReq, omitSalePrice } from '../utils/helpers';
 
 const router = Router();
 router.use(authenticate);
@@ -79,7 +79,14 @@ router.get(
       total = await prisma.article.count({ where });
     }
 
-    res.json({ items, total, page, pageSize, pages: Math.ceil(total / pageSize) });
+    const admin = isAdminReq(req);
+    res.json({
+      items: items.map((a) => omitSalePrice(a, admin)),
+      total,
+      page,
+      pageSize,
+      pages: Math.ceil(total / pageSize),
+    });
   }),
 );
 
@@ -92,7 +99,7 @@ router.get(
       include,
     });
     if (!article) throw notFound('Aucun article pour ce code-barres');
-    res.json(article);
+    res.json(omitSalePrice(article, isAdminReq(req)));
   }),
 );
 
@@ -108,7 +115,7 @@ router.get(
       },
     });
     if (!article) throw notFound('Article introuvable');
-    res.json(article);
+    res.json(omitSalePrice(article, isAdminReq(req)));
   }),
 );
 
@@ -132,9 +139,11 @@ router.put(
     const data = clean(articleSchema.partial().parse(req.body));
     // le stock ne se modifie jamais directement ici (passer par un mouvement)
     delete (data as Record<string, unknown>).stock;
+    // le prix de vente est réservé aux administrateurs
+    if (!isAdminReq(req)) delete (data as Record<string, unknown>).salePrice;
     const article = await prisma.article.update({ where: { id: req.params.id }, data, include });
     await logAction(req.user!.sub, 'ARTICLE_UPDATE', 'Article', article.id);
-    res.json(article);
+    res.json(omitSalePrice(article, isAdminReq(req)));
   }),
 );
 

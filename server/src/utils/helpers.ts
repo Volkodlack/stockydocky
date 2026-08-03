@@ -74,3 +74,21 @@ export async function nextDocumentNumber(prefix: 'BL' | 'INV'): Promise<string> 
   const seq = last ? parseInt(last.reference.split('-')[2], 10) + 1 : 1;
   return `${like}${String(seq).padStart(4, '0')}`;
 }
+
+// ─────────── Visibilité du prix de vente (réservé aux administrateurs) ───────────
+
+/** Vrai si la requête est authentifiée avec le rôle ADMIN. */
+export function isAdminReq(req: { user?: { role?: string } }): boolean {
+  return req.user?.role === 'ADMIN';
+}
+
+/**
+ * Retire le champ `salePrice` (prix de vente) d'un objet pour les non-admins.
+ * Les employés et le rôle inventaire ne voient que le prix d'achat.
+ */
+export function omitSalePrice<T>(obj: T, admin: boolean): T {
+  if (admin || obj == null || typeof obj !== 'object') return obj;
+  const clone: Record<string, unknown> = { ...(obj as Record<string, unknown>) };
+  delete clone.salePrice;
+  return clone as T;
+}

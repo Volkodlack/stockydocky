@@ -3,6 +3,7 @@ import { PackagePlus } from 'lucide-react';
 import { api, apiError } from '../../api/client';
 import type { Article, Zone, Category } from '../../api/types';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../contexts/AuthContext';
 import { Modal, Field, Input, Select, Button } from '../ui';
 
 /**
@@ -28,6 +29,8 @@ export function QuickAddArticleModal({
   showStock?: boolean;
 }) {
   const toast = useToast();
+  const { hasRole } = useAuth();
+  const canSeeSale = hasRole('ADMIN');
   const [zones, setZones] = useState<Zone[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [saving, setSaving] = useState(false);
@@ -145,9 +148,11 @@ export function QuickAddArticleModal({
           <Field label="Prix d'achat (€)">
             <Input type="number" min="0" step="0.01" value={purchasePrice} onChange={(e) => setPurchasePrice(e.target.value)} />
           </Field>
-          <Field label="Prix de vente (€)">
-            <Input type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
-          </Field>
+          {canSeeSale && (
+            <Field label="Prix de vente (€)">
+              <Input type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
+            </Field>
+          )}
           {showStock && (
             <Field label="Stock initial">
               <Input type="number" min="0" value={stock} onChange={(e) => setStock(e.target.value)} />

@@ -5,7 +5,6 @@ import {
   X,
   Sun,
   Moon,
-  ScanLine,
   LogOut,
   ChevronDown,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ import { api, apiError } from '../../api/client';
 import { ROLE_LABELS } from '../../lib/format';
 import { navForRole } from './nav';
 import { GlobalSearch } from './GlobalSearch';
-import { ScannerModal } from '../scanner/ScannerModal';
 import { QuickAddArticleModal } from '../articles/QuickAddArticleModal';
 import { useBarcodeWedge } from '../../hooks/useBarcodeWedge';
 
@@ -28,7 +26,6 @@ export function Layout() {
   const location = useLocation();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [scanOpen, setScanOpen] = useState(false);
   const [quickAddCode, setQuickAddCode] = useState<string | null>(null);
   const [userMenu, setUserMenu] = useState(false);
 
@@ -51,7 +48,6 @@ export function Layout() {
       if (status === 404) {
         // Article inconnu : proposer la création directe (gestionnaires uniquement)
         if (hasRole('ADMIN', 'EMPLOYEE')) {
-          setScanOpen(false);
           setQuickAddCode(code);
         } else {
           toast.error(`Article inconnu (code ${code}).`);
@@ -62,13 +58,8 @@ export function Layout() {
     }
   };
 
-  const onScanDetected = (code: string) => {
-    setScanOpen(false);
-    void lookupBarcode(code);
-  };
-
-  // Douchette active globalement (sauf quand un scan ou la création est en cours)
-  useBarcodeWedge({ onScan: lookupBarcode, enabled: !scanOpen && !quickAddCode });
+  // Douchette (lecteur code-barres USB/Bluetooth) active globalement
+  useBarcodeWedge({ onScan: lookupBarcode, enabled: !quickAddCode });
 
   const initials = user?.name
     ? user.name
@@ -162,16 +153,6 @@ export function Layout() {
           </div>
           <div className="flex-1 sm:hidden" />
 
-          {/* Scan */}
-          <button
-            onClick={() => setScanOpen(true)}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-accent-600 px-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-700"
-            aria-label="Scanner"
-          >
-            <ScanLine size={18} />
-            <span className="hidden md:inline">Scanner</span>
-          </button>
-
           {/* Thème */}
           <button
             onClick={toggle}
@@ -227,7 +208,6 @@ export function Layout() {
         </main>
       </div>
 
-      <ScannerModal open={scanOpen} onClose={() => setScanOpen(false)} onDetected={onScanDetected} />
 
       <QuickAddArticleModal
         open={!!quickAddCode}

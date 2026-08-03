@@ -65,7 +65,7 @@ export interface Article {
   name: string;
   description?: string | null;
   purchasePrice: number | string;
-  salePrice: number | string;
+  salePrice?: number | string;
   stock: number;
   minStock: number;
   active: boolean;
@@ -158,7 +158,7 @@ export interface DashboardData {
     outOfStock: number;
     lowStock: number;
     purchaseValue: number;
-    saleValue: number;
+    saleValue?: number;
     totalUnits: number;
   };
   monthly: Array<{ month: string; entries: number; exits: number }>;
@@ -175,7 +175,7 @@ export interface SearchResultArticle {
   name: string;
   stock: number;
   minStock: number;
-  salePrice: number | string;
+  salePrice?: number | string;
   zone?: { code: string } | null;
 }
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../config/prisma';
 import { asyncHandler, authenticate } from '../middleware/auth';
-import { ENTRY_TYPES, EXIT_TYPES } from '../utils/helpers';
+import { ENTRY_TYPES, EXIT_TYPES, isAdminReq } from '../utils/helpers';
 
 const router = Router();
 router.use(authenticate);
@@ -9,7 +9,7 @@ router.use(authenticate);
 // GET /api/dashboard
 router.get(
   '/',
-  asyncHandler(async (_req, res) => {
+  asyncHandler(async (req, res) => {
     // Indicateurs globaux (1 requête agrégée)
     const stats = await prisma.$queryRaw<
       Array<{
@@ -71,8 +71,12 @@ router.get(
       LIMIT 8;
     `;
 
+    // Le prix/valeur de vente n'est visible que par les administrateurs
+    const stats0 = stats[0] as Record<string, unknown>;
+    if (!isAdminReq(req) && stats0) delete stats0.saleValue;
+
     res.json({
-      stats: stats[0],
+      stats: stats0,
       monthly,
       recentEntries,
       recentExits,

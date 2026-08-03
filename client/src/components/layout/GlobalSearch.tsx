@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, CornerDownLeft } from 'lucide-react';
 import { api } from '../../api/client';
 import type { SearchResultArticle } from '../../api/types';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatEur, stockStatus } from '../../lib/format';
 
 export function GlobalSearch() {
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const canSeeSale = hasRole('ADMIN');
   const [q, setQ] = useState('');
   const [results, setResults] = useState<SearchResultArticle[]>([]);
   const [open, setOpen] = useState(false);
@@ -134,7 +137,7 @@ export function GlobalSearch() {
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">{a.stock}</p>
-                  <p className="text-xs text-slate-400">{formatEur(a.salePrice)}</p>
+                  {canSeeSale && <p className="text-xs text-slate-400">{formatEur(a.salePrice)}</p>}
                 </div>
                 {i === active && <CornerDownLeft size={14} className="shrink-0 text-slate-300" />}
               </button>

@@ -5,6 +5,7 @@ import { api, apiError } from '../../api/client';
 import type { SearchResultArticle, Supplier, MovementType, Article } from '../../api/types';
 import { formatEur, ENTRY_REASONS, EXIT_REASONS } from '../../lib/format';
 import { useToast } from '../../hooks/useToast';
+import { useAuth } from '../../contexts/AuthContext';
 import { useBarcodeWedge } from '../../hooks/useBarcodeWedge';
 import { PageHeader, Card, Button, Input, Select, Field, EmptyState } from '../ui';
 import { ScannerModal } from '../scanner/ScannerModal';
@@ -24,6 +25,8 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
   const isEntry = mode === 'entry';
   const navigate = useNavigate();
   const toast = useToast();
+  const { hasRole } = useAuth();
+  const canSeeSale = hasRole('ADMIN');
 
   const [type, setType] = useState<MovementType>(isEntry ? 'ENTRY_SUPPLIER' : 'EXIT_SALE');
   const [supplierId, setSupplierId] = useState('');
@@ -85,7 +88,7 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
           brand: a.brand,
           stock: a.stock,
           quantity: 1,
-          price: Number(a.salePrice),
+          price: Number(a.salePrice ?? 0),
         },
       ];
     });
@@ -321,7 +324,7 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
               <span className="text-sm text-slate-500 dark:text-slate-400">Total unités</span>
               <span className="font-display text-xl font-bold text-slate-900 dark:text-white">{totalUnits}</span>
             </div>
-            {isEntry && lines.length > 0 && (
+            {isEntry && lines.length > 0 && canSeeSale && (
               <div className="mt-1 flex items-center justify-between text-sm text-slate-400">
                 <span>Valeur (prix vente)</span>
                 <span>{formatEur(lines.reduce((s, l) => s + l.quantity * l.price, 0))}</span>
@@ -364,7 +367,7 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
             name: article.name,
             stock: article.stock,
             minStock: article.minStock,
-            salePrice: Number(article.salePrice),
+            salePrice: Number(article.salePrice ?? 0),
             zone: article.zone ?? null,
           });
           toast.success(`Article créé et ajouté : ${article.name}`);

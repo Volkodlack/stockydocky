@@ -24,10 +24,13 @@ import { api, apiError } from '../api/client';
 import type { DashboardData } from '../api/types';
 import { formatEur, formatNumber, formatDate, MOVEMENT_LABELS } from '../lib/format';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { PageHeader, StatCard, Card, PageLoader, EmptyState, Badge } from '../components/ui';
 
 export function DashboardPage() {
   const { theme } = useTheme();
+  const { hasRole } = useAuth();
+  const canSeeSale = hasRole('ADMIN');
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,18 +58,20 @@ export function DashboardPage() {
         <StatCard
           label="Valeur d'achat du stock"
           value={formatEur(data.stats.purchaseValue)}
-          hint={`Valeur de vente : ${formatEur(data.stats.saleValue)}`}
+          hint={canSeeSale ? `Valeur de vente : ${formatEur(data.stats.saleValue ?? 0)}` : undefined}
           icon={<Coins size={22} />}
           tone="green"
         />
         <StatCard label="Stock bas" value={formatNumber(data.stats.lowStock)} icon={<AlertTriangle size={22} />} tone="amber" />
         <StatCard label="Ruptures" value={formatNumber(data.stats.outOfStock)} icon={<XCircle size={22} />} tone="red" />
-        <StatCard
-          label="Marge potentielle"
-          value={formatEur(Number(data.stats.saleValue) - Number(data.stats.purchaseValue))}
-          icon={<TrendingUp size={22} />}
-          tone="brand"
-        />
+        {canSeeSale && (
+          <StatCard
+            label="Marge potentielle"
+            value={formatEur(Number(data.stats.saleValue ?? 0) - Number(data.stats.purchaseValue))}
+            icon={<TrendingUp size={22} />}
+            tone="brand"
+          />
+        )}
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">

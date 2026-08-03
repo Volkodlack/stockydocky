@@ -3,13 +3,15 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { asyncHandler, authenticate } from '../middleware/auth';
-import { staff } from '../middleware/roles';
+import { staff, adminOnly } from '../middleware/roles';
 import { applyMovement } from '../lib/stock';
 import { streamDeliveryNotePdf } from '../lib/pdf';
 import { badRequest, conflict, logAction, nextDocumentNumber, notFound } from '../utils/helpers';
 
 const router = Router();
 router.use(authenticate);
+// Les bons de livraison manipulent des prix de vente → réservés aux administrateurs.
+router.use(adminOnly);
 
 const itemSchema = z.object({
   articleId: z.string().min(1),

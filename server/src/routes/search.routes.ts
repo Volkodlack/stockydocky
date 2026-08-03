@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../config/prisma';
 import { asyncHandler, authenticate } from '../middleware/auth';
+import { isAdminReq, omitSalePrice } from '../utils/helpers';
 
 const router = Router();
 router.use(authenticate);
@@ -37,7 +38,8 @@ router.get(
       take: 12,
     });
 
-    res.json({ articles });
+    const admin = isAdminReq(req);
+    res.json({ articles: articles.map((a) => omitSalePrice(a, admin)) });
   }),
 );
 

@@ -57,7 +57,7 @@ export default function App() {
         <Route
           path="/bons-livraison"
           element={
-            <RoleGate roles={['ADMIN', 'EMPLOYEE']}>
+            <RoleGate roles={['ADMIN']}>
               <DeliveryNotesPage />
             </RoleGate>
           }

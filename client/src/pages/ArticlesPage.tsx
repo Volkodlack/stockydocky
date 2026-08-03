@@ -43,6 +43,7 @@ export function ArticlesPage() {
 
   const canEdit = hasRole('ADMIN', 'EMPLOYEE');
   const canDelete = hasRole('ADMIN', 'EMPLOYEE');
+  const canSeeSale = hasRole('ADMIN');
 
   const [data, setData] = useState<Paginated<Article> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +114,7 @@ export function ArticlesPage() {
       name: a.name,
       description: a.description ?? '',
       purchasePrice: Number(a.purchasePrice),
-      salePrice: Number(a.salePrice),
+      salePrice: Number(a.salePrice ?? 0),
       minStock: a.minStock,
       zoneId: a.zoneId ?? '',
       categoryId: a.categoryId ?? '',
@@ -286,7 +287,7 @@ export function ArticlesPage() {
                     <th className="px-5 py-3 font-semibold">Article</th>
                     <th className="px-5 py-3 font-semibold">Référence</th>
                     <th className="px-5 py-3 font-semibold">Zone</th>
-                    <th className="px-5 py-3 text-right font-semibold">Prix vente</th>
+                    <th className="px-5 py-3 text-right font-semibold">{canSeeSale ? 'Prix vente' : 'Prix achat'}</th>
                     <th className="px-5 py-3 text-center font-semibold">Stock</th>
                     <th className="px-5 py-3 text-center font-semibold">État</th>
                     <th className="px-5 py-3 text-right font-semibold">Actions</th>
@@ -306,7 +307,7 @@ export function ArticlesPage() {
                       <td className="px-5 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">{a.reference}</td>
                       <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{a.zone?.code ?? '—'}</td>
                       <td className="px-5 py-3 text-right tabular-nums text-slate-700 dark:text-slate-200">
-                        {formatEur(a.salePrice)}
+                        {formatEur(canSeeSale ? a.salePrice : a.purchasePrice)}
                       </td>
                       <td className="px-5 py-3 text-center font-semibold tabular-nums text-slate-800 dark:text-slate-100">
                         {a.stock}
@@ -354,7 +355,7 @@ export function ArticlesPage() {
                     <p className="truncate font-medium text-slate-800 dark:text-slate-100">{a.name}</p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                       {a.reference}
-                      {a.zone?.code ? ` · ${a.zone.code}` : ''} · {formatEur(a.salePrice)}
+                      {a.zone?.code ? ` · ${a.zone.code}` : ''} · {formatEur(canSeeSale ? a.salePrice : a.purchasePrice)}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -446,9 +447,11 @@ export function ArticlesPage() {
           <Field label="Prix d'achat (€)">
             <Input type="number" min={0} step="0.01" value={form.purchasePrice ?? 0} onChange={(e) => setForm({ ...form, purchasePrice: Number(e.target.value) })} />
           </Field>
-          <Field label="Prix de vente (€)">
-            <Input type="number" min={0} step="0.01" value={form.salePrice ?? 0} onChange={(e) => setForm({ ...form, salePrice: Number(e.target.value) })} />
-          </Field>
+          {canSeeSale && (
+            <Field label="Prix de vente (€)">
+              <Input type="number" min={0} step="0.01" value={form.salePrice ?? 0} onChange={(e) => setForm({ ...form, salePrice: Number(e.target.value) })} />
+            </Field>
+          )}
           <Field label="Zone">
             <Select value={form.zoneId ?? ''} onChange={(e) => setForm({ ...form, zoneId: e.target.value })}>
               <option value="">— Aucune —</option>

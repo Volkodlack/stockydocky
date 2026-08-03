@@ -26,6 +26,7 @@ export function ArticleDetailPage() {
   const toast = useToast();
   const canEdit = hasRole('ADMIN', 'EMPLOYEE');
   const canDelete = hasRole('ADMIN', 'EMPLOYEE');
+  const canSeeSale = hasRole('ADMIN');
   const { confirm, dialog } = useConfirm();
 
   const [article, setArticle] = useState<Article | null>(null);
@@ -108,7 +109,7 @@ export function ArticleDetailPage() {
 
   const status = stockStatus(article.stock, article.minStock);
   const statusColor = status === 'out' ? 'red' : status === 'low' ? 'amber' : 'green';
-  const margin = Number(article.salePrice) - Number(article.purchasePrice);
+  const margin = Number(article.salePrice ?? 0) - Number(article.purchasePrice);
 
   return (
     <div>
@@ -147,10 +148,10 @@ export function ArticleDetailPage() {
               <Row icon={<SlidersHorizontal size={16} />} label="Seuil d'alerte" value={`${article.minStock} unité(s)`} />
             </dl>
 
-            <div className="mt-5 grid grid-cols-3 gap-3 border-t border-slate-200 pt-5 dark:border-slate-800">
-              <Price label="Achat" value={formatEur(article.purchasePrice)} />
-              <Price label="Vente" value={formatEur(article.salePrice)} />
-              <Price label="Marge" value={formatEur(margin)} accent={margin >= 0} />
+            <div className={`mt-5 grid gap-3 border-t border-slate-200 pt-5 dark:border-slate-800 ${canSeeSale ? 'grid-cols-3' : 'grid-cols-1'}`}>
+              <Price label="Prix d'achat" value={formatEur(article.purchasePrice)} />
+              {canSeeSale && <Price label="Vente" value={formatEur(article.salePrice)} />}
+              {canSeeSale && <Price label="Marge" value={formatEur(margin)} accent={margin >= 0} />}
             </div>
 
             {(canEdit || canDelete) && (
