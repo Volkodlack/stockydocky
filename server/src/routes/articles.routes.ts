@@ -90,6 +90,24 @@ router.get(
   }),
 );
 
+// POST /api/articles/lookup — retrouve des articles à partir d'une liste de
+// codes (référence OU code-barres). Utilisé par la réception photo (OCR).
+router.post(
+  '/lookup',
+  asyncHandler(async (req, res) => {
+    const parsed = z.object({ codes: z.array(z.string().min(1)).max(300) }).parse(req.body);
+    const codes = [...new Set(parsed.codes.map((c) => c.trim()).filter(Boolean))];
+    if (codes.length === 0) return res.json([]);
+
+    const articles = await prisma.article.findMany({
+      where: { active: true, OR: [{ reference: { in: codes } }, { barcode: { in: codes } }] },
+      include,
+    });
+    const admin = isAdminReq(req);
+    res.json(articles.map((a) => omitSalePrice(a, admin)));
+  }),
+);
+
 // GET /api/articles/barcode/:code — lookup pour le scan
 router.get(
   '/barcode/:code',

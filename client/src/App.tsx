@@ -9,6 +9,7 @@ import { ArticleDetailPage } from './pages/ArticleDetailPage';
 import { StockInPage } from './pages/StockInPage';
 import { StockOutPage } from './pages/StockOutPage';
 import { TransferPage } from './pages/TransferPage';
+import { PhotoReceptionPage } from './pages/PhotoReceptionPage';
 import { MovementsPage } from './pages/MovementsPage';
 import { DeliveryNotesPage } from './pages/DeliveryNotesPage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -59,6 +60,14 @@ export default function App() {
           element={
             <RoleGate roles={['ADMIN', 'EMPLOYEE']}>
               <TransferPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="/reception-photo"
+          element={
+            <RoleGate roles={['ADMIN', 'EMPLOYEE']}>
+              <PhotoReceptionPage />
             </RoleGate>
           }
         />

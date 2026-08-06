@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   FileText,
   Plus,
@@ -10,6 +11,7 @@ import {
   Download,
   X,
   PackageOpen,
+  Camera,
 } from 'lucide-react';
 import { api, apiError, openPdf } from '../api/client';
 import type { DeliveryNote, DeliveryStatus, Supplier, SearchResultArticle } from '../api/types';
@@ -48,6 +50,7 @@ interface Line {
 
 export function DeliveryNotesPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const { confirm, dialog } = useConfirm();
   const [notes, setNotes] = useState<DeliveryNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,9 +95,14 @@ export function DeliveryNotesPage() {
         subtitle="Enregistrer les produits reçus de vos fournisseurs"
         icon={<FileText size={22} />}
         actions={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus size={18} /> Nouveau bon
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/reception-photo')}>
+              <Camera size={18} /> Réception par photo
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus size={18} /> Nouveau bon
+            </Button>
+          </div>
         }
       />
 
