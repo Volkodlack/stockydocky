@@ -31,6 +31,7 @@ router.get(
         name: true,
         stock: true,
         minStock: true,
+        purchasePrice: true,
         salePrice: true,
         zone: { select: { code: true } },
       },

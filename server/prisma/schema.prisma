@@ -107,6 +107,7 @@ model Supplier {
   updatedAt DateTime @updatedAt
 
   movements StockMovement[]
+  deliveryNotes DeliveryNote[]
 
   @@index([name])
 }
@@ -194,13 +195,16 @@ model DeliveryNote {
   date      DateTime       @default(now())
   address   String?
   notes     String?
-  signature String? // image base64 optionnelle
+  signature String? // image base64 optionnelle (héritage, non utilisé en réception)
+  supplierRef String? // n° du bon de livraison du fournisseur
   status    DeliveryStatus @default(DRAFT)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
   clientId String?
   client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   userId   String?
   user     User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 

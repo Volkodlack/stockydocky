@@ -112,10 +112,10 @@ export interface DeliveryNote {
   id: string;
   number: string;
   date: string;
-  address?: string | null;
+  supplierRef?: string | null;
   notes?: string | null;
-  signature?: string | null;
   status: DeliveryStatus;
+  supplier?: Supplier | { name: string } | null;
   client?: Client | { name: string } | null;
   user?: { name: string } | null;
   items?: DeliveryNoteItem[];
@@ -175,6 +175,7 @@ export interface SearchResultArticle {
   name: string;
   stock: number;
   minStock: number;
+  purchasePrice?: number | string;
   salePrice?: number | string;
   zone?: { code: string } | null;
 }

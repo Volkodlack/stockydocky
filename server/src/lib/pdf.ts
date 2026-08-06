@@ -39,10 +39,9 @@ interface DeliveryData {
   number: string;
   date: Date;
   status: string;
-  address: string | null;
+  supplierRef: string | null;
   notes: string | null;
-  signature: string | null;
-  client: { name: string; email: string | null; phone: string | null; address: string | null } | null;
+  supplier: { name: string; email: string | null; phone: string | null; address: string | null } | null;
   user: { name: string } | null;
   items: DeliveryItem[];
 }
@@ -152,7 +151,7 @@ export function streamDeliveryNotePdf(res: Response, data: DeliveryData) {
   };
 
   // ───────────── En-tête (page 1) ─────────────
-  doc.fillColor(brand).fontSize(22).font('Helvetica-Bold').text('BON DE LIVRAISON', M, 50);
+  doc.fillColor(brand).fontSize(22).font('Helvetica-Bold').text('BON DE RÉCEPTION', M, 50);
   doc.fillColor(navy).fontSize(11).font('Helvetica').text(`N° ${data.number}`, M, 80);
   doc
     .fillColor(muted)
@@ -198,27 +197,31 @@ export function streamDeliveryNotePdf(res: Response, data: DeliveryData) {
     ey += doc.heightOfString(line, { width: emitterW }) + 1;
   }
 
-  // ───────────── Bloc destinataire ─────────────
+  // ───────────── Bloc fournisseur ─────────────
   let y = 150;
-  doc.fillColor(navy).fontSize(11).font('Helvetica-Bold').text('Destinataire', M, y);
+  doc.fillColor(navy).fontSize(11).font('Helvetica-Bold').text('Fournisseur', M, y);
   y += 16;
   doc.font('Helvetica').fontSize(10);
-  if (data.client) {
-    doc.fillColor('#000').text(data.client.name, M, y);
+  if (data.supplier) {
+    doc.fillColor('#000').text(data.supplier.name, M, y);
     y += 14;
-    if (data.client.phone) {
-      doc.fillColor(muted).text(data.client.phone, M, y);
+    if (data.supplier.phone) {
+      doc.fillColor(muted).text(data.supplier.phone, M, y);
       y += 13;
     }
-    if (data.client.email) {
-      doc.fillColor(muted).text(data.client.email, M, y);
+    if (data.supplier.email) {
+      doc.fillColor(muted).text(data.supplier.email, M, y);
       y += 13;
     }
   } else {
     doc.fillColor(muted).text('—', M, y);
     y += 14;
   }
-  const addr = data.address || data.client?.address;
+  if (data.supplierRef) {
+    doc.fillColor(navy).fontSize(9).text(`Bon de livraison fournisseur : ${data.supplierRef}`, M, y);
+    y += 14;
+  }
+  const addr = data.supplier?.address;
   if (addr) {
     doc.fillColor(muted).fontSize(9);
     doc.text(addr, M, y, { width: 250 });
@@ -315,7 +318,7 @@ export function streamDeliveryNotePdf(res: Response, data: DeliveryData) {
 
   let afterY = Math.max(blockY + notesH, ty);
 
-  // ───────────── Signature ─────────────
+  // ───────────── Mention réception ─────────────
   const SIG_BLOCK_H = 16 + 64 + 16;
   let sigY = afterY + 28;
   if (sigY + SIG_BLOCK_H > MAX_Y) {
@@ -324,22 +327,14 @@ export function streamDeliveryNotePdf(res: Response, data: DeliveryData) {
 
   const sigX = 350;
   const sigW = RIGHT - sigX; // ~195
-  doc.fillColor(navy).font('Helvetica-Bold').fontSize(10).text('Bon pour réception — signature', sigX, sigY, {
+  doc.fillColor(navy).font('Helvetica-Bold').fontSize(10).text('Réceptionné par', sigX, sigY, {
     width: sigW,
     lineBreak: false,
   });
   const boxTop = sigY + 16;
-  if (data.signature && data.signature.startsWith('data:image')) {
-    try {
-      const base64 = data.signature.split(',')[1] ?? '';
-      const img = Buffer.from(base64, 'base64');
-      doc.image(img, sigX, boxTop, { fit: [sigW, 64] });
-    } catch {
-      /* signature illisible : on ignore et on laisse l'emplacement vide */
-      doc.strokeColor('#cbd5e1').lineWidth(0.5).rect(sigX, boxTop, sigW, 60).stroke();
-    }
-  } else {
-    doc.strokeColor('#cbd5e1').lineWidth(0.5).rect(sigX, boxTop, sigW, 60).stroke();
+  doc.strokeColor('#cbd5e1').lineWidth(0.5).rect(sigX, boxTop, sigW, 60).stroke();
+  if (data.user?.name) {
+    doc.fillColor(muted).font('Helvetica').fontSize(8).text(data.user.name, sigX + 4, boxTop + 4, { width: sigW - 8 });
   }
 
   // ───────────── Pied de page sur toutes les pages ─────────────

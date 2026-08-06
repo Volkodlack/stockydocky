@@ -8,6 +8,7 @@ import { ArticlesPage } from './pages/ArticlesPage';
 import { ArticleDetailPage } from './pages/ArticleDetailPage';
 import { StockInPage } from './pages/StockInPage';
 import { StockOutPage } from './pages/StockOutPage';
+import { TransferPage } from './pages/TransferPage';
 import { MovementsPage } from './pages/MovementsPage';
 import { DeliveryNotesPage } from './pages/DeliveryNotesPage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -53,11 +54,19 @@ export default function App() {
             </RoleGate>
           }
         />
+        <Route
+          path="/transferts"
+          element={
+            <RoleGate roles={['ADMIN', 'EMPLOYEE']}>
+              <TransferPage />
+            </RoleGate>
+          }
+        />
         <Route path="/mouvements" element={<MovementsPage />} />
         <Route
           path="/bons-livraison"
           element={
-            <RoleGate roles={['ADMIN']}>
+            <RoleGate roles={['ADMIN', 'EMPLOYEE']}>
               <DeliveryNotesPage />
             </RoleGate>
           }

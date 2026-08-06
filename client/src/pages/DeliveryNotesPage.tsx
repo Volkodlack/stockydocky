@@ -12,7 +12,7 @@ import {
   PackageOpen,
 } from 'lucide-react';
 import { api, apiError, openPdf } from '../api/client';
-import type { DeliveryNote, DeliveryStatus, Client, SearchResultArticle } from '../api/types';
+import type { DeliveryNote, DeliveryStatus, Supplier, SearchResultArticle } from '../api/types';
 import { formatEur, formatDate, DELIVERY_STATUS_LABELS } from '../lib/format';
 import { useToast } from '../hooks/useToast';
 import { useBarcodeWedge } from '../hooks/useBarcodeWedge';
@@ -31,7 +31,6 @@ import {
   useConfirm,
 } from '../components/ui';
 import { ScannerModal } from '../components/scanner/ScannerModal';
-import { SignaturePad } from '../components/delivery/SignaturePad';
 
 const STATUS_COLORS: Record<DeliveryStatus, 'gray' | 'green' | 'red'> = {
   DRAFT: 'gray',
@@ -90,7 +89,7 @@ export function DeliveryNotesPage() {
     <div>
       <PageHeader
         title="Bons de livraison"
-        subtitle="Créer, valider et imprimer les bons de livraison"
+        subtitle="Enregistrer les produits reçus de vos fournisseurs"
         icon={<FileText size={22} />}
         actions={
           <Button onClick={() => setCreateOpen(true)}>
@@ -118,8 +117,8 @@ export function DeliveryNotesPage() {
         ) : notes.length === 0 ? (
           <EmptyState
             icon={<FileText size={36} />}
-            title="Aucun bon de livraison"
-            description="Créez votre premier bon de livraison pour démarrer."
+            title="Aucune réception"
+            description="Enregistrez votre première réception fournisseur."
             action={
               <Button onClick={() => setCreateOpen(true)}>
                 <Plus size={18} /> Nouveau bon
@@ -133,7 +132,7 @@ export function DeliveryNotesPage() {
                 <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800">
                   <th className="px-4 py-3 font-medium">Numéro</th>
                   <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Client</th>
+                  <th className="px-4 py-3 font-medium">Fournisseur</th>
                   <th className="px-4 py-3 text-center font-medium">Lignes</th>
                   <th className="px-4 py-3 text-center font-medium">Statut</th>
                   <th className="px-4 py-3 text-right font-medium">Actions</th>
@@ -147,7 +146,7 @@ export function DeliveryNotesPage() {
                   >
                     <td className="px-4 py-3 font-mono font-medium text-slate-800 dark:text-slate-100">{n.number}</td>
                     <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{formatDate(n.date)}</td>
-                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{n.client?.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{n.supplier?.name ?? '—'}</td>
                     <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-300">{n._count?.items ?? 0}</td>
                     <td className="px-4 py-3 text-center">
                       <Badge color={STATUS_COLORS[n.status]}>{DELIVERY_STATUS_LABELS[n.status]}</Badge>
@@ -213,9 +212,9 @@ export function DeliveryNotesPage() {
 // ───────────────────────── Création ─────────────────────────
 function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const toast = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState('');
-  const [address, setAddress] = useState('');
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [supplierId, setSupplierId] = useState('');
+  const [supplierRef, setSupplierRef] = useState('');
   const [notes, setNotes] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
@@ -227,7 +226,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.get('/clients').then((r) => setClients(r.data)).catch(() => {});
+    api.get('/suppliers').then((r) => setSuppliers(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -261,7 +260,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
       if (existing) return prev.map((l) => (l.articleId === a.id ? { ...l, quantity: l.quantity + 1 } : l));
       return [
         ...prev,
-        { articleId: a.id, reference: a.reference, name: a.name, quantity: 1, unitPrice: Number(a.salePrice) },
+        { articleId: a.id, reference: a.reference, name: a.name, quantity: 1, unitPrice: Number(a.purchasePrice ?? 0) },
       ];
     });
     setQ('');
@@ -281,7 +280,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
         name: a.name,
         stock: a.stock,
         minStock: a.minStock,
-        salePrice: a.salePrice,
+        purchasePrice: a.purchasePrice,
         zone: a.zone,
       });
       toast.success(`Ajouté : ${a.name}`);
@@ -308,12 +307,12 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
     setSaving(true);
     try {
       await api.post('/delivery-notes', {
-        clientId: clientId || undefined,
-        address: address.trim() || undefined,
+        supplierId: supplierId || undefined,
+        supplierRef: supplierRef.trim() || undefined,
         notes: notes.trim() || undefined,
         items: lines.map((l) => ({ articleId: l.articleId, quantity: l.quantity, unitPrice: l.unitPrice })),
       });
-      toast.success('Bon de livraison créé (brouillon).');
+      toast.success('Réception créée (brouillon).');
       onCreated();
     } catch (e) {
       toast.error(apiError(e));
@@ -341,18 +340,18 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
     >
       <div className="space-y-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Client">
-            <Select value={clientId} onChange={(e) => setClientId(e.target.value)}>
-              <option value="">— Aucun client —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+          <Field label="Fournisseur">
+            <Select value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+              <option value="">— Aucun fournisseur —</option>
+              {suppliers.map((sup) => (
+                <option key={sup.id} value={sup.id}>
+                  {sup.name}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Adresse de livraison (optionnel)">
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse spécifique…" />
+          <Field label="N° du bon de livraison fournisseur (optionnel)">
+            <Input value={supplierRef} onChange={(e) => setSupplierRef(e.target.value)} placeholder="Réf. du BL fournisseur…" />
           </Field>
         </div>
 
@@ -387,7 +386,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
                       {a.name}
                     </p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {a.reference} · Stock : {a.stock} · {formatEur(a.salePrice)}
+                      {a.reference} · Stock : {a.stock} · achat {formatEur(a.purchasePrice)}
                     </p>
                   </div>
                   <Plus size={16} className="shrink-0 text-brand-500" />
@@ -402,7 +401,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
           <EmptyState
             icon={<PackageOpen size={36} />}
             title="Aucun article"
-            description="Recherchez ou scannez des articles à livrer."
+            description="Recherchez ou scannez les articles reçus."
           />
         ) : (
           <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
@@ -411,7 +410,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
                 <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-surface-800/50">
                   <th className="px-3 py-2 font-medium">Article</th>
                   <th className="px-3 py-2 text-center font-medium">Qté</th>
-                  <th className="px-3 py-2 text-right font-medium">P.U. HT</th>
+                  <th className="px-3 py-2 text-right font-medium">Prix d'achat</th>
                   <th className="px-3 py-2 text-right font-medium">Total</th>
                   <th className="px-3 py-2" />
                 </tr>
@@ -462,7 +461,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
               <tfoot>
                 <tr className="border-t border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-surface-800/50">
                   <td colSpan={3} className="px-3 py-2.5 text-right text-sm font-medium text-slate-600 dark:text-slate-300">
-                    Total HT
+                    Valeur (achat)
                   </td>
                   <td className="px-3 py-2.5 text-right font-display text-base font-bold text-slate-900 dark:text-white">
                     {formatEur(total)}
@@ -479,7 +478,7 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
         </Field>
 
         <p className="text-xs text-slate-400">
-          Le bon est créé en brouillon. Le stock ne sera décrémenté qu'à la validation.
+          La réception est créée en brouillon. Le stock n'entrera qu'à la validation.
         </p>
       </div>
 
@@ -501,7 +500,6 @@ function DetailNoteModal({ id, onClose, onChanged }: { id: string; onClose: () =
   const { confirm, dialog } = useConfirm();
   const [note, setNote] = useState<DeliveryNote | null>(null);
   const [loading, setLoading] = useState(true);
-  const [signature, setSignature] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
 
   const load = useCallback(() => {
@@ -520,29 +518,15 @@ function DetailNoteModal({ id, onClose, onChanged }: { id: string; onClose: () =
   const validate = async () => {
     const ok = await confirm({
       title: 'Valider le bon',
-      message: 'La validation décrémente le stock des articles livrés. Continuer ?',
+      message: 'La validation fait ENTRER en stock les produits reçus. Continuer ?',
       confirmLabel: 'Valider',
     });
     if (!ok) return;
     setWorking(true);
     try {
-      await api.post(`/delivery-notes/${id}/validate`, signature ? { signature } : {});
-      toast.success('Bon validé, stock mis à jour.');
+      await api.post(`/delivery-notes/${id}/validate`, {});
+      toast.success('Réception validée, stock mis à jour.');
       onChanged();
-      load();
-    } catch (e) {
-      toast.error(apiError(e));
-    } finally {
-      setWorking(false);
-    }
-  };
-
-  const saveSignature = async () => {
-    if (!signature) return;
-    setWorking(true);
-    try {
-      await api.post(`/delivery-notes/${id}/signature`, { signature });
-      toast.success('Signature enregistrée.');
       load();
     } catch (e) {
       toast.error(apiError(e));
@@ -586,9 +570,11 @@ function DetailNoteModal({ id, onClose, onChanged }: { id: string; onClose: () =
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Client</p>
-              <p className="font-medium text-slate-800 dark:text-slate-100">{note.client?.name ?? '—'}</p>
-              {note.address && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{note.address}</p>}
+              <p className="text-xs uppercase tracking-wide text-slate-400">Fournisseur</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{note.supplier?.name ?? '—'}</p>
+              {note.supplierRef && (
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">BL fournisseur : {note.supplierRef}</p>
+              )}
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
               <p className="text-xs uppercase tracking-wide text-slate-400">Émis par</p>
@@ -640,24 +626,6 @@ function DetailNoteModal({ id, onClose, onChanged }: { id: string; onClose: () =
             </div>
           )}
 
-          {/* Signature */}
-          <div>
-            <p className="label">Signature du client</p>
-            {note.signature ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700">
-                <img src={note.signature} alt="Signature" className="max-h-40" />
-              </div>
-            ) : (
-              <>
-                <SignaturePad onChange={setSignature} />
-                <div className="mt-2">
-                  <Button variant="outline" size="sm" onClick={saveSignature} disabled={!signature} loading={working}>
-                    Enregistrer la signature
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
         </div>
       )}
       {dialog}

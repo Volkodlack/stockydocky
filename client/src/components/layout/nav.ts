@@ -4,6 +4,7 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   ArrowLeftRight,
+  Shuffle,
   FileText,
   ClipboardList,
   MapPin,
@@ -47,8 +48,9 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: '/entrees', label: 'Entrées de stock', icon: ArrowDownToLine, roles: STAFF },
       { to: '/sorties', label: 'Sorties de stock', icon: ArrowUpFromLine, roles: STAFF },
+      { to: '/transferts', label: 'Transferts', icon: Shuffle, roles: STAFF },
       { to: '/mouvements', label: 'Historique', icon: ArrowLeftRight, roles: ALL },
-      { to: '/bons-livraison', label: 'Bons de livraison', icon: FileText, roles: ADMIN },
+      { to: '/bons-livraison', label: 'Bons de livraison', icon: FileText, roles: STAFF },
       { to: '/inventaires', label: 'Inventaires', icon: ClipboardList, roles: INVENTORY },
     ],
   },

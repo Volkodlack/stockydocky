@@ -15,6 +15,7 @@ import usersRoutes from './users.routes';
 import auditRoutes from './audit.routes';
 import exportRoutes from './export.routes';
 import importRoutes from './import.routes';
+import transfersRoutes from './transfers.routes';
 
 const router = Router();
 
@@ -38,5 +39,6 @@ router.use('/users', usersRoutes);
 router.use('/audit', auditRoutes);
 router.use('/export', exportRoutes);
 router.use('/import', importRoutes);
+router.use('/transfers', transfersRoutes);
 
 export default router;
