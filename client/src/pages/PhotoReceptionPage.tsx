@@ -15,7 +15,7 @@ import { api, apiError } from '../api/client';
 import type { Article, Supplier } from '../api/types';
 import { useToast } from '../hooks/useToast';
 import { useBarcodeWedge } from '../hooks/useBarcodeWedge';
-import { readDeliveryNote, extractCandidates } from '../lib/ocr';
+import { readDeliveryNote, extractCandidates, extractLineQuantity } from '../lib/ocr';
 import { PageHeader, Card, Button, Input, Select, Field } from '../components/ui';
 import { ScannerModal } from '../components/scanner/ScannerModal';
 import { QuickAddArticleModal } from '../components/articles/QuickAddArticleModal';
@@ -47,8 +47,8 @@ export function PhotoReceptionPage() {
   const [supplierId, setSupplierId] = useState('');
   const [supplierRef, setSupplierRef] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
-  const [toCreate, setToCreate] = useState<{ code: string; name: string }[]>([]);
-  const [quickAdd, setQuickAdd] = useState<{ code: string; name: string } | null>(null);
+  const [toCreate, setToCreate] = useState<{ code: string; name: string; quantity: number }[]>([]);
+  const [quickAdd, setQuickAdd] = useState<{ code: string; name: string; quantity: number } | null>(null);
   const [redCount, setRedCount] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -125,7 +125,9 @@ export function PhotoReceptionPage() {
         if (a.barcode) matchedCodes.add(a.barcode);
         if (seen.has(a.id)) continue;
         seen.add(a.id);
-        recognized.push({ article: a, quantity: 1, source: 'photo' });
+        // quantité lue sur le BL (via la référence ou le code-barres reconnu)
+        const codeForQty = a.barcode && text.includes(a.barcode) ? a.barcode : a.reference || '';
+        recognized.push({ article: a, quantity: extractLineQuantity(text, codeForQty), source: 'photo' });
       }
       // articles lus mais inconnus → propositions de création pré-remplies
       const candidates = extractCandidates(text, matchedCodes);
@@ -135,6 +137,8 @@ export function PhotoReceptionPage() {
       setTotalRows(total);
       setRedCount(Math.max(0, total - recognized.length - candidates.length));
       setStep('review');
+      // Ouvre automatiquement la fenêtre de création pour le 1er article inconnu
+      if (candidates.length) setQuickAdd(candidates[0]);
       if (recognized.length === 0 && candidates.length === 0) {
         toast.info('Aucun article reconnu sur la photo. Complétez au scan ci-dessous.');
       } else {
@@ -220,9 +224,11 @@ export function PhotoReceptionPage() {
 
   // Un article « lu mais inconnu » vient d'être créé → il passe en ligne verte
   const onCandidateCreated = (article: Article, code: string) => {
-    setLines((prev) => [...prev, { article, quantity: 1, source: 'photo' }]);
-    setToCreate((prev) => prev.filter((c) => c.code !== code));
-    setQuickAdd(null);
+    const cand = toCreate.find((c) => c.code === code);
+    setLines((prev) => [...prev, { article, quantity: cand?.quantity ?? 1, source: 'photo' }]);
+    const remaining = toCreate.filter((c) => c.code !== code);
+    setToCreate(remaining);
+    setQuickAdd(remaining[0] ?? null); // enchaîne automatiquement sur le prochain inconnu
   };
 
   const validate = async () => {
@@ -334,6 +340,7 @@ export function PhotoReceptionPage() {
                     onClick={() => {
                       setLines([]);
                       setToCreate([]);
+                      setQuickAdd(null);
                       setRedCount(0);
                       setTotalRows(0);
                       setStep('capture');
@@ -438,8 +445,32 @@ export function PhotoReceptionPage() {
                 <Field label="N° du BL fournisseur (optionnel)">
                   <Input value={supplierRef} onChange={(e) => setSupplierRef(e.target.value)} placeholder="Ex. 000321806" />
                 </Field>
-                <Field label="Nombre de lignes sur le BL" hint="Ajustez si besoin — génère les lignes rouges à retrouver">
-                  <Input type="number" min={lines.length} value={totalRows} onChange={(e) => adjustTotal(Number(e.target.value))} />
+                <Field
+                  label="Nombre d'articles différents sur le BL"
+                  hint="Ajustez avec − / + pour générer les lignes à retrouver"
+                >
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => adjustTotal(totalRows - 1)}
+                      disabled={totalRows <= lines.length + toCreate.length}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-lg font-semibold text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-surface-800"
+                      aria-label="Retirer une ligne"
+                    >
+                      −
+                    </button>
+                    <span className="min-w-[3ch] text-center font-display text-2xl font-bold text-slate-900 dark:text-white">
+                      {totalRows}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => adjustTotal(totalRows + 1)}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-lg font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-surface-800"
+                      aria-label="Ajouter une ligne"
+                    >
+                      +
+                    </button>
+                  </div>
                 </Field>
               </div>
 

@@ -42,8 +42,21 @@ function preprocess(source: HTMLCanvasElement): HTMLCanvasElement {
 
 function estimateRows(text: string): number {
   // chaque ligne d'article porte une quantité type « 1 UN », « 2 PCE »…
-  const matches = text.match(/\b\d+\s?(?:UN|PCE|PCS|PC|U|ML|M|KG|L|BTE|SAC|CT)\b/gi);
+  // unités strictes pour ne pas confondre avec des dimensions (« 100L », « D513 »)
+  const matches = text.match(/\b\d{1,4}\s?(?:UN|PCES|PCE|PCS|PC|BTE|SAC|CT)\b/gi);
   return matches ? matches.length : 0;
+}
+
+/** Quantité lue sur la ligne d'un code (nombre devant l'unité). Défaut : 1. */
+export function extractLineQuantity(text: string, code: string): number {
+  const line = text.split('\n').find((l) => l.includes(code));
+  if (!line) return 1;
+  const ms = [...line.matchAll(/(\d{1,4})\s?(?:UN|PCES|PCE|PCS|PC|BTE|SAC|CT)\b/gi)];
+  if (ms.length) {
+    const q = parseInt(ms[ms.length - 1][1], 10);
+    return q > 0 ? q : 1;
+  }
+  return 1;
 }
 
 /**
@@ -89,8 +102,8 @@ export async function readDeliveryNote(
  * code n'existe pas encore, on renvoie { code, nom } pour pré-remplir la
  * création (l'utilisateur valide / complète ensuite).
  */
-export function extractCandidates(text: string, matched: Set<string>): { code: string; name: string }[] {
-  const out: { code: string; name: string }[] = [];
+export function extractCandidates(text: string, matched: Set<string>): { code: string; name: string; quantity: number }[] {
+  const out: { code: string; name: string; quantity: number }[] = [];
   const usedNames = new Set<string>();
   for (const raw of text.split('\n')) {
     const line = raw.trim();
@@ -107,7 +120,7 @@ export function extractCandidates(text: string, matched: Set<string>): { code: s
     const key = name.toLowerCase();
     if (usedNames.has(key)) continue;
     usedNames.add(key);
-    out.push({ code, name });
+    out.push({ code, name, quantity: extractLineQuantity(text, code) });
   }
   return out;
 }
