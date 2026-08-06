@@ -10,6 +10,7 @@ import {
   CircleCheck,
   CirclePlus,
   Trash2,
+  X,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import type { Article, Supplier } from '../api/types';
@@ -231,6 +232,15 @@ export function PhotoReceptionPage() {
     setQuickAdd(remaining[0] ?? null); // enchaîne automatiquement sur le prochain inconnu
   };
 
+  // « Ce n'est pas un article » : écarte une proposition mal lue (sans la créer)
+  const dismissCandidate = (code: string) => {
+    const remaining = toCreate.filter((c) => c.code !== code);
+    setToCreate(remaining);
+    // ce n'était pas une vraie ligne du BL → on décrémente le total
+    setTotalRows((t) => Math.max(lines.length + remaining.length, t - 1));
+    setQuickAdd((q) => (q && q.code === code ? remaining[0] ?? null : q));
+  };
+
   const validate = async () => {
     if (lines.length === 0) {
       toast.error('Ajoutez au moins un article.');
@@ -402,6 +412,14 @@ export function PhotoReceptionPage() {
                     <Button variant="outline" onClick={() => setQuickAdd(c)}>
                       Compléter et créer
                     </Button>
+                    <button
+                      onClick={() => dismissCandidate(c.code)}
+                      className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+                      aria-label="Ce n'est pas un article — écarter"
+                      title="Ce n'est pas un article"
+                    >
+                      <X size={16} />
+                    </button>
                   </div>
                 ))}
 
