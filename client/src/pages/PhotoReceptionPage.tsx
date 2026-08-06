@@ -8,15 +8,17 @@ import {
   Image as ImageIcon,
   CircleAlert,
   CircleCheck,
+  CirclePlus,
   Trash2,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import type { Article, Supplier } from '../api/types';
 import { useToast } from '../hooks/useToast';
 import { useBarcodeWedge } from '../hooks/useBarcodeWedge';
-import { readDeliveryNote } from '../lib/ocr';
+import { readDeliveryNote, extractCandidates } from '../lib/ocr';
 import { PageHeader, Card, Button, Input, Select, Field } from '../components/ui';
 import { ScannerModal } from '../components/scanner/ScannerModal';
+import { QuickAddArticleModal } from '../components/articles/QuickAddArticleModal';
 
 interface Line {
   article: Article;
@@ -45,6 +47,8 @@ export function PhotoReceptionPage() {
   const [supplierId, setSupplierId] = useState('');
   const [supplierRef, setSupplierRef] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
+  const [toCreate, setToCreate] = useState<{ code: string; name: string }[]>([]);
+  const [quickAdd, setQuickAdd] = useState<{ code: string; name: string } | null>(null);
   const [redCount, setRedCount] = useState(0);
   const [totalRows, setTotalRows] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -108,27 +112,36 @@ export function PhotoReceptionPage() {
     setProgress(0);
     setProgressLabel('Lecture du bon de livraison…');
     try {
-      const { codes, estimatedRows } = await readDeliveryNote(canvas, (p) => setProgress(p));
+      const { text, codes, estimatedRows } = await readDeliveryNote(canvas, (p) => setProgress(p));
       setProgressLabel('Recherche des articles…');
       const res = await api.post('/articles/lookup', { codes });
       const matched = res.data as Article[];
       // déduplique par article
       const seen = new Set<string>();
       const recognized: Line[] = [];
+      const matchedCodes = new Set<string>();
       for (const a of matched) {
+        if (a.reference) matchedCodes.add(a.reference);
+        if (a.barcode) matchedCodes.add(a.barcode);
         if (seen.has(a.id)) continue;
         seen.add(a.id);
         recognized.push({ article: a, quantity: 1, source: 'photo' });
       }
-      const total = Math.max(estimatedRows, recognized.length);
+      // articles lus mais inconnus → propositions de création pré-remplies
+      const candidates = extractCandidates(text, matchedCodes);
+      const total = Math.max(estimatedRows, recognized.length + candidates.length);
       setLines(recognized);
+      setToCreate(candidates);
       setTotalRows(total);
-      setRedCount(Math.max(0, total - recognized.length));
+      setRedCount(Math.max(0, total - recognized.length - candidates.length));
       setStep('review');
-      if (recognized.length === 0) {
+      if (recognized.length === 0 && candidates.length === 0) {
         toast.info('Aucun article reconnu sur la photo. Complétez au scan ci-dessous.');
       } else {
-        toast.success(`${recognized.length} article(s) reconnu(s).`);
+        const parts = [];
+        if (recognized.length) parts.push(`${recognized.length} reconnu(s)`);
+        if (candidates.length) parts.push(`${candidates.length} à créer`);
+        toast.success(parts.join(' · '));
       }
     } catch (e) {
       // On affiche le vrai message pour pouvoir diagnostiquer (OCR, réseau…)
@@ -199,9 +212,17 @@ export function PhotoReceptionPage() {
     setRedCount((prev) => prev + 1); // la ligne redevient « à retrouver »
   };
   const adjustTotal = (t: number) => {
-    const total = Math.max(lines.length, t);
+    const floor = lines.length + toCreate.length;
+    const total = Math.max(floor, t);
     setTotalRows(total);
-    setRedCount(total - lines.length);
+    setRedCount(total - floor);
+  };
+
+  // Un article « lu mais inconnu » vient d'être créé → il passe en ligne verte
+  const onCandidateCreated = (article: Article, code: string) => {
+    setLines((prev) => [...prev, { article, quantity: 1, source: 'photo' }]);
+    setToCreate((prev) => prev.filter((c) => c.code !== code));
+    setQuickAdd(null);
   };
 
   const validate = async () => {
@@ -312,6 +333,7 @@ export function PhotoReceptionPage() {
                     variant="ghost"
                     onClick={() => {
                       setLines([]);
+                      setToCreate([]);
                       setRedCount(0);
                       setTotalRows(0);
                       setStep('capture');
@@ -357,6 +379,25 @@ export function PhotoReceptionPage() {
                   </div>
                 ))}
 
+                {/* lignes ambre : lues sur le BL mais inconnues → à créer (pré-rempli) */}
+                {toCreate.map((c) => (
+                  <div
+                    key={`amber-${c.code}`}
+                    className="flex items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 dark:border-amber-500/30 dark:bg-amber-500/10"
+                  >
+                    <CirclePlus size={18} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">{c.name}</p>
+                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                        code {c.code} · lu sur le BL, à créer
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => setQuickAdd(c)}>
+                      Compléter et créer
+                    </Button>
+                  </div>
+                ))}
+
                 {/* lignes rouges (non reconnues, à compléter au scan) */}
                 {Array.from({ length: redCount }).map((_, i) => (
                   <div
@@ -370,7 +411,7 @@ export function PhotoReceptionPage() {
                   </div>
                 ))}
 
-                {lines.length === 0 && redCount === 0 && (
+                {lines.length === 0 && toCreate.length === 0 && redCount === 0 && (
                   <p className="py-6 text-center text-sm text-slate-400">
                     Aucune ligne. Ajustez le total du BL ou scannez les produits.
                   </p>
@@ -407,6 +448,12 @@ export function PhotoReceptionPage() {
                   <span className="text-green-600 dark:text-green-400">Reconnus / scannés</span>
                   <span className="font-semibold">{lines.length}</span>
                 </div>
+                {toCreate.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-amber-600 dark:text-amber-400">À créer (lus, inconnus)</span>
+                    <span className="font-semibold">{toCreate.length}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-red-500">À retrouver</span>
                   <span className="font-semibold">{redCount}</span>
@@ -434,6 +481,15 @@ export function PhotoReceptionPage() {
           void addByCode(code);
         }}
         title="Scanner un produit reçu"
+      />
+
+      <QuickAddArticleModal
+        open={!!quickAdd}
+        barcode={quickAdd?.code ?? ''}
+        initialName={quickAdd?.name ?? ''}
+        showStock={false}
+        onClose={() => setQuickAdd(null)}
+        onCreated={(article) => onCandidateCreated(article, quickAdd?.code ?? '')}
       />
     </div>
   );

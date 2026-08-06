@@ -82,3 +82,32 @@ export async function readDeliveryNote(
 
   return { text: fullText, codes: [...codes], estimatedRows: estimateRows(fullText) };
 }
+
+/**
+ * À partir du texte OCR et des codes déjà appariés au catalogue, propose des
+ * articles « lus mais inconnus » : pour chaque ligne de désignation dont le
+ * code n'existe pas encore, on renvoie { code, nom } pour pré-remplir la
+ * création (l'utilisateur valide / complète ensuite).
+ */
+export function extractCandidates(text: string, matched: Set<string>): { code: string; name: string }[] {
+  const out: { code: string; name: string }[] = [];
+  const usedNames = new Set<string>();
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!/[A-Za-z]{3,}/.test(line)) continue; // besoin d'une désignation
+    // le code article suit généralement le « | » ; sinon on prend le 1er code
+    const pipe = line.match(/\|\s*(\d{5,8})/);
+    const first = line.match(/\d{5,8}/);
+    const code = pipe ? pipe[1] : first ? first[0] : null;
+    if (!code || matched.has(code)) continue; // article déjà connu → pas une création
+    // nom = texte avant le premier code (≥4 chiffres) → conserve « 20X27 », « 100L »…
+    const m = line.match(/\d{4,}/);
+    const name = (m ? line.slice(0, m.index) : line).replace(/[|]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    if (name.replace(/[^A-Za-z]/g, '').length < 3) continue; // pas de vraie désignation
+    const key = name.toLowerCase();
+    if (usedNames.has(key)) continue;
+    usedNames.add(key);
+    out.push({ code, name });
+  }
+  return out;
+}

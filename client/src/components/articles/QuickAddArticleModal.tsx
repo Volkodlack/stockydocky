@@ -20,6 +20,7 @@ export function QuickAddArticleModal({
   onCreated,
   initialStock = 0,
   showStock = true,
+  initialName = '',
 }: {
   open: boolean;
   barcode: string;
@@ -27,6 +28,7 @@ export function QuickAddArticleModal({
   onCreated: (article: Article) => void;
   initialStock?: number;
   showStock?: boolean;
+  initialName?: string;
 }) {
   const toast = useToast();
   const { hasRole } = useAuth();
@@ -50,7 +52,7 @@ export function QuickAddArticleModal({
   useEffect(() => {
     if (!open) return;
     setReference(barcode);
-    setName('');
+    setName(initialName);
     setBrand('');
     setCode(barcode);
     setPurchasePrice('0');
@@ -65,7 +67,7 @@ export function QuickAddArticleModal({
         setCategories(c.data);
       })
       .catch(() => {});
-  }, [open, barcode, initialStock]);
+  }, [open, barcode, initialStock, initialName]);
 
   const submit = async () => {
     if (!reference.trim()) {
