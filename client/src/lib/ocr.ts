@@ -15,12 +15,15 @@ export interface OcrOutcome {
   estimatedRows: number; // estimation du nombre de lignes d'articles du BL
 }
 
-/** Agrandit, passe en gris et binarise une image sur un canvas. */
+/** Agrandit (ou réduit), passe en gris et binarise une image sur un canvas. */
 function preprocess(source: HTMLCanvasElement): HTMLCanvasElement {
-  const scale = source.width < 1400 ? 2 : 1; // agrandit si l'image est petite
+  const MAX_W = 2200; // plafond pour éviter les plantages mémoire sur mobile
+  let scale = 1;
+  if (source.width < 1400) scale = 2; // agrandit si l'image est petite
+  else if (source.width > MAX_W) scale = MAX_W / source.width; // réduit si trop grande
   const c = document.createElement('canvas');
-  c.width = Math.round(source.width * scale);
-  c.height = Math.round(source.height * scale);
+  c.width = Math.max(1, Math.round(source.width * scale));
+  c.height = Math.max(1, Math.round(source.height * scale));
   const ctx = c.getContext('2d')!;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';

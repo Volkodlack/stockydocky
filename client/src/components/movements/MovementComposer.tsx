@@ -127,6 +127,24 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
 
   useBarcodeWedge({ onScan: addByBarcode, enabled: !scanOpen && !quickAddCode });
 
+  // Saisie manuelle : « Entrée » ajoute l'article (ou ouvre la création si inconnu)
+  const submitSearch = () => {
+    const code = q.trim();
+    if (!code) return;
+    const exact = results.find((a) => a.barcode === code || a.reference === code);
+    if (exact) {
+      addArticle(exact);
+      setQ('');
+      setResults([]);
+      setShowResults(false);
+      return;
+    }
+    void addByBarcode(code);
+    setQ('');
+    setResults([]);
+    setShowResults(false);
+  };
+
   const setQty = (articleId: string, qty: number) =>
     setLines((prev) => prev.map((l) => (l.articleId === articleId ? { ...l, quantity: Math.max(1, qty) } : l)));
   const removeLine = (articleId: string) => setLines((prev) => prev.filter((l) => l.articleId !== articleId));
@@ -197,7 +215,15 @@ export function MovementComposer({ mode }: { mode: 'entry' | 'exit' }) {
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     onFocus={() => results.length && setShowResults(true)}
-                    placeholder="Rechercher un article à ajouter…"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitSearch();
+                      }
+                    }}
+                    placeholder="Rechercher ou saisir un code-barres…"
+                    inputMode="search"
+                    enterKeyHint="done"
                     className="pl-10"
                   />
                 </div>

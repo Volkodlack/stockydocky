@@ -130,6 +130,18 @@ export function TransferPage() {
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     onFocus={() => results.length && setShowResults(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const code = q.trim();
+                        if (!code) return;
+                        const exact = results.find((a) => a.barcode === code || a.reference === code);
+                        if (exact) void selectById(exact.id);
+                        else void selectByBarcode(code);
+                      }
+                    }}
+                    inputMode="search"
+                    enterKeyHint="done"
                     placeholder="Rechercher un article (réf, nom, code-barres)…"
                     className="pl-10"
                   />

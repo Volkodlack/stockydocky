@@ -372,7 +372,36 @@ function CreateNoteModal({ onClose, onCreated }: { onClose: () => void; onCreate
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onFocus={() => results.length && setShowResults(true)}
-                placeholder="Rechercher un article à ajouter…"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const code = q.trim();
+                    if (!code) return;
+                    const exact = results.find((a) => a.barcode === code || a.reference === code);
+                    if (exact) {
+                      addArticle({
+                        id: exact.id,
+                        reference: exact.reference,
+                        barcode: exact.barcode,
+                        brand: exact.brand,
+                        name: exact.name,
+                        stock: exact.stock,
+                        minStock: exact.minStock,
+                        purchasePrice: exact.purchasePrice,
+                        zone: exact.zone,
+                      });
+                      setQ('');
+                      setResults([]);
+                      setShowResults(false);
+                    } else {
+                      void addByBarcode(code);
+                      setQ('');
+                    }
+                  }
+                }}
+                placeholder="Rechercher ou saisir un code-barres…"
+                inputMode="search"
+                enterKeyHint="done"
                 className="pl-10"
               />
             </div>

@@ -38,7 +38,7 @@ export function PhotoReceptionPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [camError, setCamError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   // réception
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -94,16 +94,12 @@ export function PhotoReceptionPage() {
     return () => stopCamera();
   }, [step, startCamera, stopCamera]);
 
-  // Recadre la zone du cadre (80% largeur, bande centrale) → canvas
-  const cropFrame = (source: HTMLVideoElement | HTMLImageElement, w: number, h: number): HTMLCanvasElement => {
-    const fw = w * 0.9;
-    const fh = h * 0.55;
-    const fx = (w - fw) / 2;
-    const fy = (h - fh) / 2;
+  // Copie l'image entière (vidéo ou photo importée) sur un canvas.
+  const toCanvas = (source: HTMLVideoElement | HTMLImageElement, w: number, h: number): HTMLCanvasElement => {
     const c = document.createElement('canvas');
-    c.width = fw;
-    c.height = fh;
-    c.getContext('2d')!.drawImage(source, fx, fy, fw, fh, 0, 0, fw, fh);
+    c.width = w;
+    c.height = h;
+    c.getContext('2d')!.drawImage(source, 0, 0, w, h);
     return c;
   };
 
@@ -130,12 +126,16 @@ export function PhotoReceptionPage() {
       setRedCount(Math.max(0, total - recognized.length));
       setStep('review');
       if (recognized.length === 0) {
-        toast.info("Aucun article reconnu sur la photo. Complétez au scan ci-dessous.");
+        toast.info('Aucun article reconnu sur la photo. Complétez au scan ci-dessous.');
       } else {
         toast.success(`${recognized.length} article(s) reconnu(s).`);
       }
     } catch (e) {
-      toast.error(apiError(e));
+      // On affiche le vrai message pour pouvoir diagnostiquer (OCR, réseau…)
+      const msg = (e as { response?: unknown })?.response
+        ? apiError(e)
+        : (e as Error)?.message || 'Erreur inconnue';
+      toast.error(`Lecture impossible : ${msg}`);
       setStep('capture');
     }
   };
@@ -143,22 +143,28 @@ export function PhotoReceptionPage() {
   const capture = () => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
-      toast.error('La caméra n’est pas prête.');
+      toast.error("La caméra n'est pas encore prête, patientez une seconde.");
       return;
     }
+    // IMPORTANT : dessiner l'image AVANT d'arrêter la caméra (sinon image vide).
+    const canvas = toCanvas(video, video.videoWidth, video.videoHeight);
     stopCamera();
-    const canvas = cropFrame(video, video.videoWidth, video.videoHeight);
     void runOcr(canvas);
   };
 
   const onFile = (file: File) => {
     const img = new Image();
+    const url = URL.createObjectURL(file);
     img.onload = () => {
-      const canvas = cropFrame(img, img.naturalWidth, img.naturalHeight);
+      const canvas = toCanvas(img, img.naturalWidth, img.naturalHeight);
+      URL.revokeObjectURL(url);
       void runOcr(canvas);
     };
-    img.onerror = () => toast.error('Image illisible.');
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      toast.error('Image illisible.');
+    };
+    img.src = url;
   };
 
   // ─────────────────────────── Scan (remplit les lignes rouges) ───────────────────────────
@@ -231,18 +237,18 @@ export function PhotoReceptionPage() {
 
       {step === 'capture' && (
         <Card>
-          <div className="relative mx-auto aspect-[4/3] w-full max-w-2xl overflow-hidden rounded-xl bg-slate-900">
+          <div className="relative mx-auto aspect-[3/4] w-full max-w-md overflow-hidden rounded-xl bg-slate-900">
             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <video ref={videoRef} className="h-full w-full object-cover" muted autoPlay playsInline />
-            {/* Cadre de visée */}
+            {/* Cadre de visée (quasi plein cadre pour un BL entier) */}
             {!camError && (
               <div className="pointer-events-none absolute inset-0">
-                <div className="absolute left-[5%] top-[22.5%] h-[55%] w-[90%] rounded-lg border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
-                <p className="absolute inset-x-0 top-3 text-center text-xs font-medium text-white/90">
-                  Cadrez le tableau des articles dans le rectangle
+                <div className="absolute left-[3%] top-[7%] h-[86%] w-[94%] rounded-lg border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.30)]" />
+                <p className="absolute inset-x-0 top-1.5 text-center text-[11px] font-medium text-white/90">
+                  Faites tenir tout le BL dans le cadre
                 </p>
-                <p className="absolute inset-x-0 bottom-3 text-center text-xs text-white/80">
-                  Rapprochez-vous jusqu'à ce que les chiffres soient bien nets · évitez les reflets
+                <p className="absolute inset-x-0 bottom-1.5 px-4 text-center text-[11px] text-white/80">
+                  Bien à plat, chiffres nets, sans reflet
                 </p>
               </div>
             )}
@@ -258,14 +264,14 @@ export function PhotoReceptionPage() {
             <Button onClick={capture} disabled={!!camError}>
               <Camera size={18} /> Prendre la photo
             </Button>
-            <Button variant="outline" onClick={() => fileRef.current?.click()}>
-              <ImageIcon size={18} /> Importer une photo
+            <Button variant="outline" onClick={() => galleryRef.current?.click()}>
+              <ImageIcon size={18} /> Galerie
             </Button>
+            {/* Galerie / fichiers : PAS d'attribut capture → le téléphone propose la photothèque */}
             <input
-              ref={fileRef}
+              ref={galleryRef}
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
             />
